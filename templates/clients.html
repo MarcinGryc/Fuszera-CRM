@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Klienci</h1>
+
+{% for client in clients %}
+<div class="card">
+    <h2>{{ client["name"] }}</h2>
+    <p><strong>Firma:</strong> {{ client["company"] }}</p>
+    <p><strong>Email:</strong> {{ client["email"] }}</p>
+    <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
+    <p><strong>Notatki:</strong> {{ client["notes"] }}</p>
+</div>
+{% else %}
+<p>Brak klientów.</p>
+{% endfor %}
+{% endblock %}

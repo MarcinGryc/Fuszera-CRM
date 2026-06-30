@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Dodaj klienta</h1>
+
+<form method="post">
+    <label>Imię i nazwisko / nazwa</label>
+    <input name="name" required>
+
+    <label>Firma</label>
+    <input name="company">
+
+    <label>Email</label>
+    <input name="email" type="email">
+
+    <label>Telefon</label>
+    <input name="phone">
+
+    <label>Notatki</label>
+    <textarea name="notes"></textarea>
+
+    <button type="submit">Zapisz</button>
+</form>
+{% endblock %}
