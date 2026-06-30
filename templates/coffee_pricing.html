@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Wyceń kawę</h1>
+
+<div class="card">
+    <form method="post">
+        <label>Typ kawy</label>
+        <select name="coffee_type" id="coffee_type" onchange="toggleCoffeeType()">
+            <option value="single">Single</option>
+            <option value="blend">Blend</option>
+        </select>
+
+        <div id="single_box">
+            <label>Cena zielonego ziarna netto za 1 kg</label>
+            <input name="single_price" type="number" step="0.01" placeholder="np. 40">
+        </div>
+
+        <div id="blend_box" style="display:none;">
+            <h3>Skład blendu</h3>
+
+            <label>Ziarno 1 — cena netto / kg</label>
+            <input name="blend_price" type="number" step="0.01">
+
+            <label>Ziarno 1 — procent w blendzie</label>
+            <input name="blend_percentage" type="number" step="0.01">
+
+            <label>Ziarno 2 — cena netto / kg</label>
+            <input name="blend_price" type="number" step="0.01">
+
+            <label>Ziarno 2 — procent w blendzie</label>
+            <input name="blend_percentage" type="number" step="0.01">
+
+            <label>Ziarno 3 — cena netto / kg</label>
+            <input name="blend_price" type="number" step="0.01">
+
+            <label>Ziarno 3 — procent w blendzie</label>
+            <input name="blend_percentage" type="number" step="0.01">
+        </div>
+
+        <label>Koszt pracy na 1 kg wypalonej kawy</label>
+        <input name="labor" type="number" step="0.01" value="0">
+
+        <button type="submit">Wylicz cenę</button>
+    </form>
+</div>
+
+{% if result %}
+<h2>Wynik</h2>
+
+<div class="card">
+    <p><strong>Średnia cena zielonego ziarna netto:</strong> {{ result.green_price }} zł/kg</p>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <h3>B2C 250 g</h3>
+        <p>Koszt netto: {{ result.b2c_250.cost_net }} zł</p>
+        <p>Netto: <strong>{{ result.b2c_250.net }} zł</strong></p>
+        <p>Brutto: <strong>{{ result.b2c_250.gross }} zł</strong></p>
+    </div>
+
+    <div class="card">
+        <h3>B2C 1 kg</h3>
+        <p>Koszt netto: {{ result.b2c_1000.cost_net }} zł</p>
+        <p>Netto: <strong>{{ result.b2c_1000.net }} zł</strong></p>
+        <p>Brutto: <strong>{{ result.b2c_1000.gross }} zł</strong></p>
+    </div>
+
+    <div class="card">
+        <h3>B2B 250 g</h3>
+        <p>Koszt netto: {{ result.b2b_250.cost_net }} zł</p>
+        <p>Netto po rabacie: <strong>{{ result.b2b_250.net }} zł</strong></p>
+        <p>Brutto po rabacie: <strong>{{ result.b2b_250.gross }} zł</strong></p>
+    </div>
+
+    <div class="card">
+        <h3>B2B 1 kg</h3>
+        <p>Koszt netto: {{ result.b2b_1000.cost_net }} zł</p>
+        <p>Netto po rabacie: <strong>{{ result.b2b_1000.net }} zł</strong></p>
+        <p>Brutto po rabacie: <strong>{{ result.b2b_1000.gross }} zł</strong></p>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function toggleCoffeeType() {
+    const type = document.getElementById("coffee_type").value;
+    document.getElementById("single_box").style.display = type === "single" ? "block" : "none";
+    document.getElementById("blend_box").style.display = type === "blend" ? "block" : "none";
+}
+</script>
+{% endblock %}

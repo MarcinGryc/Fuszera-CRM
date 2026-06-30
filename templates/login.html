@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <title>Logowanie - Fuszera CRM</title>
+
+    <style>
+        :root {
+            --bg: #1f1f24;
+            --panel: #2b2b33;
+            --text: #f4f4f5;
+            --muted: #b8b8c2;
+            --pink: #ffb6d9;
+            --pink2: #ff8fc7;
+            --danger: #ff6b6b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(255, 182, 217, 0.28), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(255, 143, 199, 0.22), transparent 36%),
+                linear-gradient(135deg, #17171b, #2b2b33);
+            color: var(--text);
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            width: 430px;
+            max-width: 92%;
+            background: rgba(43, 43, 51, 0.92);
+            border: 1px solid rgba(255, 182, 217, 0.35);
+            border-radius: 24px;
+            padding: 38px;
+            box-shadow: 0 28px 80px rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+        }
+
+        .brand {
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--pink);
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            color: var(--pink);
+            font-size: 36px;
+        }
+
+        p {
+            color: var(--muted);
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 18px;
+            border-radius: 11px;
+            border: 1px solid #555561;
+            background: #34343d;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--pink);
+            box-shadow: 0 0 0 3px rgba(255, 182, 217, 0.12);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--pink);
+            color: #17171b;
+            border: none;
+            border-radius: 11px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: var(--pink2);
+        }
+
+        .error {
+            background: rgba(255, 107, 107, 0.14);
+            border: 1px solid rgba(255, 107, 107, 0.45);
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 11px;
+            margin-bottom: 18px;
+        }
+
+        .hint {
+            margin-top: 18px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .hint strong {
+            color: var(--pink);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-box">
+        <div class="brand">Fuszera CRM</div>
+
+        <h1>Logowanie</h1>
+
+        <p>Zaloguj się, aby przejść do panelu zarządzania.</p>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post">
+            <label>Login</label>
+            <input name="username" required autofocus>
+
+            <label>Hasło</label>
+            <input name="password" type="password" required>
+
+            <button type="submit">Zaloguj</button>
+        </form>
+
+        <div class="hint">
+            Testowo: <strong>admin</strong> / <strong>admin123</strong>
+        </div>
+    </div>
+</body>
+</html>

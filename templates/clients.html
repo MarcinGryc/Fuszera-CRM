@@ -3,15 +3,84 @@
 {% block content %}
 <h1>Klienci</h1>
 
-{% for client in clients %}
 <div class="card">
-    <h2>{{ client["name"] }}</h2>
-    <p><strong>Firma:</strong> {{ client["company"] }}</p>
-    <p><strong>Email:</strong> {{ client["email"] }}</p>
-    <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
-    <p><strong>Notatki:</strong> {{ client["notes"] }}</p>
+    <h2>Dodaj klienta</h2>
+
+    <form method="post">
+        <label>Typ klienta</label>
+        <select name="type" required>
+            <option value="b2b">B2B</option>
+            <option value="individual">Indywidualny</option>
+        </select>
+
+        <label>Imię i nazwisko / osoba kontaktowa</label>
+        <input name="name" required>
+
+        <label>Firma</label>
+        <input name="company">
+
+        <label>NIP</label>
+        <input name="nip">
+
+        <label>Email</label>
+        <input name="email" type="email">
+
+        <label>Telefon</label>
+        <input name="phone">
+
+        <label>Adres</label>
+        <textarea name="address"></textarea>
+
+        <label>Notatki</label>
+        <textarea name="notes"></textarea>
+
+        <button type="submit">Dodaj klienta</button>
+    </form>
 </div>
-{% else %}
-<p>Brak klientów.</p>
-{% endfor %}
+
+<details open>
+    <summary>Klienci B2B</summary>
+
+    {% for client in b2b %}
+    <div class="card">
+        <h3>{{ client["company"] or client["name"] }}</h3>
+        <p><strong>Osoba kontaktowa:</strong> {{ client["name"] }}</p>
+        <p><strong>NIP:</strong> {{ client["nip"] }}</p>
+        <p><strong>Email:</strong> {{ client["email"] }}</p>
+        <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
+        <p><strong>Adres:</strong> {{ client["address"] }}</p>
+
+        <a class="btn" href="/clients/{{ client['id'] }}">Szczegóły</a>
+        <a class="btn" href="/clients/edit/{{ client['id'] }}">Edytuj</a>
+
+        <form method="post" action="/clients/delete/{{ client['id'] }}" class="inline">
+            <button class="delete" type="submit" onclick="return confirm('Na pewno usunąć klienta?')">Usuń</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">Brak klientów B2B.</p>
+    {% endfor %}
+</details>
+
+<details open>
+    <summary>Klienci indywidualni</summary>
+
+    {% for client in individual %}
+    <div class="card">
+        <h3>{{ client["name"] }}</h3>
+        <p><strong>Email:</strong> {{ client["email"] }}</p>
+        <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
+        <p><strong>Adres:</strong> {{ client["address"] }}</p>
+
+        <a class="btn" href="/clients/{{ client['id'] }}">Szczegóły</a>
+        <a class="btn" href="/clients/edit/{{ client['id'] }}">Edytuj</a>
+
+        <form method="post" action="/clients/delete/{{ client['id'] }}" class="inline">
+            <button class="delete" type="submit" onclick="return confirm('Na pewno usunąć klienta?')">Usuń</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">Brak klientów indywidualnych.</p>
+    {% endfor %}
+</details>
 {% endblock %}

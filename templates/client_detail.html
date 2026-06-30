@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ client["company"] or client["name"] }}</h1>
+
+<div class="card">
+    <p><strong>Typ:</strong> {{ "B2B" if client["type"] == "b2b" else "Indywidualny" }}</p>
+    <p><strong>Osoba / nazwa:</strong> {{ client["name"] }}</p>
+    <p><strong>Firma:</strong> {{ client["company"] }}</p>
+    <p><strong>NIP:</strong> {{ client["nip"] }}</p>
+    <p><strong>Email:</strong> {{ client["email"] }}</p>
+    <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
+    <p><strong>Adres:</strong><br>{{ client["address"] }}</p>
+    <p><strong>Notatki:</strong><br>{{ client["notes"] }}</p>
+</div>
+
+<h2>Historia zamówień klienta</h2>
+
+{% for order in orders %}
+<div class="card">
+    <h3>{{ order["product_name"] }}</h3>
+    <p><strong>Ilość:</strong> {{ order["quantity"] }}</p>
+    <p><strong>Wartość:</strong> {{ "%.2f"|format(order["total"]) }} zł</p>
+    <p><strong>Data:</strong> {{ order["order_date"] }}</p>
+    <p><strong>Notatki:</strong> {{ order["notes"] }}</p>
+</div>
+{% else %}
+<p class="muted">Ten klient nie ma jeszcze zamówień.</p>
+{% endfor %}
+{% endblock %}

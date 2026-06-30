@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Finanse</h1>
+
+<div class="grid">
+    <div class="card">
+        <h3>Przychody</h3>
+        <div class="stat income">{{ "%.2f"|format(income) }} zł</div>
+    </div>
+
+    <div class="card">
+        <h3>Wydatki</h3>
+        <div class="stat expense">{{ "%.2f"|format(expense) }} zł</div>
+    </div>
+
+    <div class="card">
+        <h3>Bilans konta</h3>
+        <div class="stat">{{ "%.2f"|format(balance) }} zł</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Dodaj wpis</h2>
+
+    <form method="post">
+        <label>Typ</label>
+        <select name="type" required>
+            <option value="income">Przychód</option>
+            <option value="expense">Wydatek</option>
+        </select>
+
+        <label>Tytuł</label>
+        <input name="title" required>
+
+        <label>Kwota</label>
+        <input name="amount" type="number" step="0.01" required>
+
+        <label>Data</label>
+        <input name="date" type="date">
+
+        <button type="submit">Dodaj</button>
+    </form>
+</div>
+
+<h2>Historia finansów</h2>
+
+<table>
+    <tr>
+        <th>Data</th>
+        <th>Typ</th>
+        <th>Tytuł</th>
+        <th>Kwota</th>
+        <th>Akcja</th>
+    </tr>
+
+    {% for item in items %}
+    <tr>
+        <td>{{ item["date"] }}</td>
+        <td class="{{ 'income' if item['type'] == 'income' else 'expense' }}">
+            {{ "Przychód" if item["type"] == "income" else "Wydatek" }}
+        </td>
+        <td>{{ item["title"] }}</td>
+        <td>{{ "%.2f"|format(item["amount"]) }} zł</td>
+        <td>
+            <form method="post" action="/finances/delete/{{ item['id'] }}">
+                <button class="delete" type="submit">Usuń</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

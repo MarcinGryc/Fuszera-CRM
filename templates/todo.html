@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Todo lista</h1>
+
+<div class="card">
+    <form method="post">
+        <label>Nowe zadanie</label>
+        <input name="task" required>
+        <button type="submit">Dodaj zadanie</button>
+    </form>
+</div>
+
+{% for todo in todos %}
+<div class="card">
+    <p class="{{ 'done' if todo['done'] else '' }}">{{ todo["task"] }}</p>
+
+    <form method="post" action="/todo/toggle/{{ todo['id'] }}" style="display:inline;">
+        <button type="submit">
+            {{ "Cofnij" if todo["done"] else "Zrobione" }}
+        </button>
+    </form>
+
+    <form method="post" action="/todo/delete/{{ todo['id'] }}" style="display:inline;">
+        <button class="delete" type="submit">Usuń</button>
+    </form>
+</div>
+{% else %}
+<p class="muted">Brak zadań.</p>
+{% endfor %}
+{% endblock %}

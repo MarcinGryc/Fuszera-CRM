@@ -1,9 +1,73 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card">
-    <h1>Fuszera CRM</h1>
-    <p>Prosty system CRM do obsługi klientów.</p>
-    <a href="/clients">Przejdź do klientów</a>
+<h1>Fuszera CRM</h1>
+<p class="muted">Panel zarządzania klientami, zamówieniami, produktami, magazynem i finansami.</p>
+
+<div class="grid">
+    <div class="card">
+        <h3>Klienci B2B</h3>
+        <div class="stat">{{ b2b_count }}</div>
+    </div>
+
+    <div class="card">
+        <h3>Klienci indywidualni</h3>
+        <div class="stat">{{ individual_count }}</div>
+    </div>
+
+    <div class="card">
+        <h3>Produkty</h3>
+        <div class="stat">{{ products_count }}</div>
+    </div>
+
+    <div class="card">
+        <h3>Magazyn</h3>
+        <div class="stat">{{ inventory_count }}</div>
+    </div>
+
+    <div class="card">
+        <h3>Zamówienia</h3>
+        <div class="stat">{{ orders_count }}</div>
+    </div>
+
+    <div class="card">
+        <h3>Todo</h3>
+        <div class="stat">{{ todos_count }}</div>
+    </div>
 </div>
+
+<div class="grid">
+    <div class="card">
+        <h3>Przychody</h3>
+        <div class="stat income">{{ "%.2f"|format(income) }} zł</div>
+    </div>
+
+    <div class="card">
+        <h3>Wydatki</h3>
+        <div class="stat expense">{{ "%.2f"|format(expense) }} zł</div>
+    </div>
+
+    <div class="card">
+        <h3>Bilans konta</h3>
+        <div class="stat">{{ "%.2f"|format(balance) }} zł</div>
+    </div>
+</div>
+
+<h2>Todo na dziś / najważniejsze</h2>
+
+{% for todo in todos %}
+<div class="card">
+    <p>{{ todo["task"] }}</p>
+
+    <form method="post" action="/todo/toggle/{{ todo['id'] }}" class="inline">
+        <button type="submit">Zrobione</button>
+    </form>
+
+    <form method="post" action="/todo/delete/{{ todo['id'] }}" class="inline">
+        <button class="delete" type="submit">Usuń</button>
+    </form>
+</div>
+{% else %}
+<p class="muted">Brak aktywnych zadań.</p>
+{% endfor %}
 {% endblock %}

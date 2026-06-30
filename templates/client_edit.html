@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Edytuj klienta</h1>
+
+<div class="card">
+    <form method="post">
+        <label>Typ klienta</label>
+        <select name="type" required>
+            <option value="b2b" {% if client["type"] == "b2b" %}selected{% endif %}>B2B</option>
+            <option value="individual" {% if client["type"] == "individual" %}selected{% endif %}>Indywidualny</option>
+        </select>
+
+        <label>Imię i nazwisko / osoba kontaktowa</label>
+        <input name="name" value="{{ client['name'] or '' }}" required>
+
+        <label>Firma</label>
+        <input name="company" value="{{ client['company'] or '' }}">
+
+        <label>NIP</label>
+        <input name="nip" value="{{ client['nip'] or '' }}">
+
+        <label>Email</label>
+        <input name="email" type="email" value="{{ client['email'] or '' }}">
+
+        <label>Telefon</label>
+        <input name="phone" value="{{ client['phone'] or '' }}">
+
+        <label>Adres</label>
+        <textarea name="address">{{ client["address"] or "" }}</textarea>
+
+        <label>Notatki</label>
+        <textarea name="notes">{{ client["notes"] or "" }}</textarea>
+
+        <button type="submit">Zapisz zmiany</button>
+        <a class="btn" href="/clients">Anuluj</a>
+    </form>
+</div>
+{% endblock %}

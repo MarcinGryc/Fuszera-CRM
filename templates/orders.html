@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Historia zamówień</h1>
+
+<div class="card">
+    <h2>Dodaj zamówienie</h2>
+
+    <form method="post">
+        <label>Klient</label>
+        <select name="client_id">
+            <option value="">Bez przypisanego klienta</option>
+            {% for client in clients %}
+            <option value="{{ client['id'] }}">
+                {{ client["company"] or client["name"] }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <label>Produkt</label>
+        <select name="product_name" required>
+            {% for product in products %}
+            <option value="{{ product['name'] }}">
+                {{ product["name"] }} / {{ product["weight"] }} / {{ "%.2f"|format(product["price"]) }} zł
+            </option>
+            {% endfor %}
+        </select>
+
+        <label>Ilość</label>
+        <input name="quantity" type="number" value="1" required>
+
+        <label>Wartość zamówienia</label>
+        <input name="total" type="number" step="0.01" required>
+
+        <label>Data</label>
+        <input name="order_date" type="date">
+
+        <label>Notatki</label>
+        <textarea name="notes"></textarea>
+
+        <button type="submit">Dodaj zamówienie</button>
+    </form>
+</div>
+
+<h2>Wszystkie zamówienia</h2>
+
+<table>
+    <tr>
+        <th>Data</th>
+        <th>Klient</th>
+        <th>Produkt</th>
+        <th>Ilość</th>
+        <th>Wartość</th>
+        <th>Notatki</th>
+        <th>Akcja</th>
+    </tr>
+
+    {% for order in orders %}
+    <tr>
+        <td>{{ order["order_date"] }}</td>
+        <td>{{ order["client_name"] or "Brak" }}</td>
+        <td>{{ order["product_name"] }}</td>
+        <td>{{ order["quantity"] }}</td>
+        <td>{{ "%.2f"|format(order["total"]) }} zł</td>
+        <td>{{ order["notes"] }}</td>
+        <td>
+            <form method="post" action="/orders/delete/{{ order['id'] }}">
+                <button class="delete" type="submit">Usuń</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
