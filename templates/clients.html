@@ -3,57 +3,59 @@
 {% block content %}
 <h1>Klienci</h1>
 
-<div class="card">
-    <h2>Dodaj klienta</h2>
+<details>
+    <summary>Dodaj klienta</summary>
 
-    <form method="post">
-        <label>Typ klienta</label>
-        <select name="type" required>
-            <option value="b2b">B2B</option>
-            <option value="individual">Indywidualny</option>
-        </select>
+    <div class="card">
+        <form method="post">
+            <label>Typ klienta</label>
+            <select name="type" required>
+                <option value="b2b">B2B</option>
+                <option value="individual">Indywidualny</option>
+            </select>
 
-        <label>Imię i nazwisko / osoba kontaktowa</label>
-        <input name="name" required>
+            <label>Imię i nazwisko / osoba kontaktowa</label>
+            <input name="name" required>
 
-        <label>Firma</label>
-        <input name="company">
+            <label>Firma</label>
+            <input name="company">
 
-        <label>NIP</label>
-        <input name="nip">
+            <label>NIP</label>
+            <input name="nip">
 
-        <label>Email</label>
-        <input name="email" type="email">
+            <label>Email</label>
+            <input name="email" type="email">
 
-        <label>Telefon</label>
-        <input name="phone">
+            <label>Telefon</label>
+            <input name="phone">
 
-        <label>Adres</label>
-        <textarea name="address"></textarea>
+            <label>Adres</label>
+            <textarea name="address"></textarea>
 
-        <label>Notatki</label>
-        <textarea name="notes"></textarea>
+            <label>Notatki</label>
+            <textarea name="notes"></textarea>
 
-        <button type="submit">Dodaj klienta</button>
-    </form>
-</div>
+            <button type="submit">Dodaj klienta</button>
+        </form>
+    </div>
+</details>
 
 <details open>
     <summary>Klienci B2B</summary>
 
     {% for client in b2b %}
     <div class="card">
-        <h3>{{ client["company"] or client["name"] }}</h3>
-        <p><strong>Osoba kontaktowa:</strong> {{ client["name"] }}</p>
-        <p><strong>NIP:</strong> {{ client["nip"] }}</p>
-        <p><strong>Email:</strong> {{ client["email"] }}</p>
-        <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
-        <p><strong>Adres:</strong> {{ client["address"] }}</p>
+        <h3>{{ client.company or client.name }}</h3>
+        <p><strong>Osoba kontaktowa:</strong> {{ client.name }}</p>
+        <p><strong>NIP:</strong> {{ client.nip }}</p>
+        <p><strong>Email:</strong> {{ client.email }}</p>
+        <p><strong>Telefon:</strong> {{ client.phone }}</p>
+        <p><strong>Adres:</strong> {{ client.address }}</p>
 
-        <a class="btn" href="/clients/{{ client['id'] }}">Szczegóły</a>
-        <a class="btn" href="/clients/edit/{{ client['id'] }}">Edytuj</a>
+        <a class="btn" href="/clients/{{ client.id }}">Szczegóły</a>
+        <a class="btn" href="/clients/edit/{{ client.id }}">Edytuj</a>
 
-        <form method="post" action="/clients/delete/{{ client['id'] }}" class="inline">
+        <form method="post" action="/clients/delete/{{ client.id }}" class="inline">
             <button class="delete" type="submit" onclick="return confirm('Na pewno usunąć klienta?')">Usuń</button>
         </form>
     </div>
@@ -67,15 +69,15 @@
 
     {% for client in individual %}
     <div class="card">
-        <h3>{{ client["name"] }}</h3>
-        <p><strong>Email:</strong> {{ client["email"] }}</p>
-        <p><strong>Telefon:</strong> {{ client["phone"] }}</p>
-        <p><strong>Adres:</strong> {{ client["address"] }}</p>
+        <h3>{{ client.name }}</h3>
+        <p><strong>Email:</strong> {{ client.email }}</p>
+        <p><strong>Telefon:</strong> {{ client.phone }}</p>
+        <p><strong>Adres:</strong> {{ client.address }}</p>
 
-        <a class="btn" href="/clients/{{ client['id'] }}">Szczegóły</a>
-        <a class="btn" href="/clients/edit/{{ client['id'] }}">Edytuj</a>
+        <a class="btn" href="/clients/{{ client.id }}">Szczegóły</a>
+        <a class="btn" href="/clients/edit/{{ client.id }}">Edytuj</a>
 
-        <form method="post" action="/clients/delete/{{ client['id'] }}" class="inline">
+        <form method="post" action="/clients/delete/{{ client.id }}" class="inline">
             <button class="delete" type="submit" onclick="return confirm('Na pewno usunąć klienta?')">Usuń</button>
         </form>
     </div>
@@ -83,4 +85,8 @@
     <p class="muted">Brak klientów indywidualnych.</p>
     {% endfor %}
 </details>
+
+<div class="export-box">
+    <a class="btn" href="/clients/export">Eksportuj klientów do Excela</a>
+</div>
 {% endblock %}

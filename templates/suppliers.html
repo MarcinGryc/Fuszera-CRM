@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Dostawcy</h1>
+
+<details>
+    <summary>Dodaj dostawcę</summary>
+
+    <div class="card">
+        <form method="post">
+            <label>Nazwa</label>
+            <input name="name" required>
+
+            <label>Co dostarcza</label>
+            <input name="supplies">
+
+            <label>Email</label>
+            <input name="email" type="email">
+
+            <label>Telefon</label>
+            <input name="phone">
+
+            <label>NIP</label>
+            <input name="nip">
+
+            <label>Adres</label>
+            <textarea name="address"></textarea>
+
+            <button type="submit">Dodaj dostawcę</button>
+        </form>
+    </div>
+</details>
+
+<h2>Lista dostawców</h2>
+
+<table>
+    <tr>
+        <th>Nazwa</th>
+        <th>Co dostarcza</th>
+        <th>Email</th>
+        <th>Telefon</th>
+        <th>NIP</th>
+        <th>Adres</th>
+        <th>Akcja</th>
+    </tr>
+
+    {% for supplier in suppliers %}
+    <tr>
+        <td>{{ supplier.name }}</td>
+        <td>{{ supplier.supplies }}</td>
+        <td>{{ supplier.email }}</td>
+        <td>{{ supplier.phone }}</td>
+        <td>{{ supplier.nip }}</td>
+        <td>{{ supplier.address }}</td>
+        <td>
+            <form method="post" action="/suppliers/delete/{{ supplier.id }}">
+                <button class="delete" type="submit" onclick="return confirm('Usunąć dostawcę?')">Usuń</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="export-box">
+    <a class="btn" href="/suppliers/export">Eksportuj dostawców do Excela</a>
+</div>
+{% endblock %}

@@ -5,65 +5,83 @@
 <p class="muted">Panel zarządzania klientami, zamówieniami, produktami, magazynem i finansami.</p>
 
 <div class="grid">
-    <div class="card">
-        <h3>Klienci B2B</h3>
-        <div class="stat">{{ b2b_count }}</div>
-    </div>
+    <a class="card-link" href="/clients">
+        <div class="card">
+            <h3>Klienci B2B</h3>
+            <div class="stat">{{ b2b_count }}</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Klienci indywidualni</h3>
-        <div class="stat">{{ individual_count }}</div>
-    </div>
+    <a class="card-link" href="/clients">
+        <div class="card">
+            <h3>Klienci indywidualni</h3>
+            <div class="stat">{{ individual_count }}</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Produkty</h3>
-        <div class="stat">{{ products_count }}</div>
-    </div>
+    <a class="card-link" href="/products">
+        <div class="card">
+            <h3>Produkty</h3>
+            <div class="stat">{{ products_count }}</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Magazyn</h3>
-        <div class="stat">{{ inventory_count }}</div>
-    </div>
+    <a class="card-link" href="/inventory">
+        <div class="card">
+            <h3>Magazyn</h3>
+            <div class="stat">{{ inventory_count }}</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Zamówienia</h3>
-        <div class="stat">{{ orders_count }}</div>
-    </div>
+    <a class="card-link" href="/orders">
+        <div class="card">
+            <h3>Zamówienia</h3>
+            <div class="stat">{{ orders_count }}</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Todo</h3>
-        <div class="stat">{{ todos_count }}</div>
-    </div>
+    <a class="card-link" href="/todo">
+        <div class="card">
+            <h3>Todo</h3>
+            <div class="stat">{{ todos_count }}</div>
+        </div>
+    </a>
 </div>
 
 <div class="grid">
-    <div class="card">
-        <h3>Przychody</h3>
-        <div class="stat income">{{ "%.2f"|format(income) }} zł</div>
-    </div>
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Przychody</h3>
+            <div class="stat income">{{ "%.2f"|format(income) }} zł</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Wydatki</h3>
-        <div class="stat expense">{{ "%.2f"|format(expense) }} zł</div>
-    </div>
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Wydatki</h3>
+            <div class="stat expense">{{ "%.2f"|format(expense) }} zł</div>
+        </div>
+    </a>
 
-    <div class="card">
-        <h3>Bilans konta</h3>
-        <div class="stat">{{ "%.2f"|format(balance) }} zł</div>
-    </div>
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Bilans konta</h3>
+            <div class="stat">{{ "%.2f"|format(balance) }} zł</div>
+        </div>
+    </a>
 </div>
 
 <h2>Todo na dziś / najważniejsze</h2>
 
 {% for todo in todos %}
 <div class="card">
-    <p>{{ todo["task"] }}</p>
+    <p>{{ todo.task }}</p>
 
-    <form method="post" action="/todo/toggle/{{ todo['id'] }}" class="inline">
+    <form method="post" action="/todo/toggle/{{ todo.id }}" class="inline">
         <button type="submit">Zrobione</button>
     </form>
 
-    <form method="post" action="/todo/delete/{{ todo['id'] }}" class="inline">
+    <form method="post" action="/todo/delete/{{ todo.id }}" class="inline">
         <button class="delete" type="submit">Usuń</button>
     </form>
 </div>
