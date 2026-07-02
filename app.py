@@ -20,6 +20,8 @@ def create_app():
     from routes.inventory import inventory_bp
     from routes.coffee import coffee_bp
     from routes.suppliers import suppliers_bp
+    from routes.distribution import distribution_bp
+    from routes.offers import offers_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -31,6 +33,8 @@ def create_app():
     app.register_blueprint(inventory_bp)
     app.register_blueprint(coffee_bp)
     app.register_blueprint(suppliers_bp)
+    app.register_blueprint(distribution_bp)
+    app.register_blueprint(offers_bp)
 
     return app
 

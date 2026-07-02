@@ -26,9 +26,6 @@
             <label>Adres</label>
             <textarea name="address"></textarea>
 
-            <label>Notatki</label>
-            <textarea name="notes"></textarea>
-
             <button type="submit">Dodaj dostawcę</button>
         </form>
     </div>
@@ -45,7 +42,6 @@
         <p><strong>Telefon:</strong> {{ supplier.phone }}</p>
         <p><strong>NIP:</strong> {{ supplier.nip }}</p>
         <p><strong>Adres:</strong> {{ supplier.address }}</p>
-        <p><strong>Notatki:</strong> {{ supplier.notes }}</p>
 
         <a class="btn" href="/suppliers/edit/{{ supplier.id }}">Edytuj</a>
 
