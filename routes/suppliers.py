@@ -4,6 +4,7 @@ from extensions import db
 from models import Supplier
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
+from routes.import_utils import read_xlsx_rows
 
 suppliers_bp = Blueprint("suppliers", __name__)
 
@@ -51,3 +52,29 @@ def suppliers_export():
         "dostawcy.xlsx",
         [("Dostawcy", ["ID", "Nazwa", "Co dostarcza", "Email", "Telefon", "NIP", "Adres"], rows)],
     )
+
+@suppliers_bp.route("/suppliers/import", methods=["POST"])
+@login_required
+def suppliers_import():
+    file = request.files.get("file")
+
+    if not file:
+        return redirect(url_for("suppliers.suppliers"))
+
+    rows = read_xlsx_rows(file)
+
+    for row in rows:
+        supplier = Supplier(
+            name=row.get("Nazwa") or "Bez nazwy",
+            supplies=row.get("Co dostarcza"),
+            email=row.get("Email"),
+            phone=row.get("Telefon"),
+            nip=row.get("NIP"),
+            address=row.get("Adres"),
+        )
+
+        db.session.add(supplier)
+
+    db.session.commit()
+
+    return redirect(url_for("suppliers.suppliers"))

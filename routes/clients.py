@@ -4,6 +4,7 @@ from extensions import db
 from models import Client
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
+from routes.import_utils import read_xlsx_rows
 
 clients_bp = Blueprint("clients", __name__)
 
@@ -93,3 +94,31 @@ def clients_export():
         "klienci.xlsx",
         [("Klienci", ["ID", "Typ", "Nazwa/osoba", "Firma", "NIP", "Email", "Telefon", "Adres", "Notatki"], rows)],
     )
+
+@clients_bp.route("/clients/import", methods=["POST"])
+@login_required
+def clients_import():
+    file = request.files.get("file")
+
+    if not file:
+        return redirect(url_for("clients.clients"))
+
+    rows = read_xlsx_rows(file)
+
+    for row in rows:
+        client = Client(
+            type="b2b" if str(row.get("Typ", "")).lower() == "b2b" else "individual",
+            name=row.get("Nazwa/osoba") or row.get("Nazwa") or row.get("Imię i nazwisko") or "Brak nazwy",
+            company=row.get("Firma"),
+            nip=row.get("NIP"),
+            email=row.get("Email"),
+            phone=row.get("Telefon"),
+            address=row.get("Adres"),
+            notes=row.get("Notatki"),
+        )
+
+        db.session.add(client)
+
+    db.session.commit()
+
+    return redirect(url_for("clients.clients"))

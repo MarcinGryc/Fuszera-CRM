@@ -89,4 +89,10 @@
 <div class="export-box">
     <a class="btn" href="/clients/export">Eksportuj klientów do Excela</a>
 </div>
+
+<form method="post" action="/clients/import" enctype="multipart/form-data" style="margin-top: 15px;">
+    <label>Import klientów z Excela</label>
+    <input type="file" name="file" accept=".xlsx" required>
+    <button type="submit">Importuj klientów</button>
+</form>
 {% endblock %}

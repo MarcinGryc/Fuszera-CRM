@@ -63,5 +63,12 @@
 
 <div class="export-box">
     <a class="btn" href="/suppliers/export">Eksportuj dostawców do Excela</a>
-</div>
+</div>\
+
+<form method="post" action="/suppliers/import" enctype="multipart/form-data" style="margin-top: 15px;">
+    <label>Import dostawców z Excela</label>
+    <input type="file" name="file" accept=".xlsx" required>
+    <button type="submit">Importuj dostawców</button>
+</form>
+
 {% endblock %}

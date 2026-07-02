@@ -4,6 +4,7 @@ from extensions import db
 from models import Product
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
+from routes.import_utils import read_xlsx_rows
 
 products_bp = Blueprint("products", __name__)
 
@@ -45,3 +46,26 @@ def products_export():
         "produkty.xlsx",
         [("Produkty", ["ID", "Nazwa", "Gramatura", "Cena"], rows)],
     )
+
+@products_bp.route("/products/import", methods=["POST"])
+@login_required
+def products_import():
+    file = request.files.get("file")
+
+    if not file:
+        return redirect(url_for("products.products"))
+
+    rows = read_xlsx_rows(file)
+
+    for row in rows:
+        product = Product(
+            name=row.get("Nazwa") or row.get("Produkt") or "Bez nazwy",
+            weight=row.get("Gramatura"),
+            price=float(row.get("Cena") or 0),
+        )
+
+        db.session.add(product)
+
+    db.session.commit()
+
+    return redirect(url_for("products.products"))

@@ -60,4 +60,10 @@
     <a class="btn" href="/inventory/export">Eksportuj magazyn do Excela</a>
 </div>
 
+<form method="post" action="/inventory/import" enctype="multipart/form-data" style="margin-top: 15px;">
+    <label>Import magazynu z Excela</label>
+    <input type="file" name="file" accept=".xlsx" required>
+    <button type="submit">Importuj magazyn</button>
+</form>
+
 {% endblock %}

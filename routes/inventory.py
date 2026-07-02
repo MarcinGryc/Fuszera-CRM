@@ -4,6 +4,7 @@ from extensions import db
 from models import InventoryItem
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
+from routes.import_utils import read_xlsx_rows
 
 inventory_bp = Blueprint("inventory", __name__)
 
@@ -55,3 +56,27 @@ def inventory_export():
         "magazyn.xlsx",
         [("Magazyn", ["ID", "Nazwa", "Stan", "Jednostka", "Notatki"], rows)],
     )
+
+@inventory_bp.route("/inventory/import", methods=["POST"])
+@login_required
+def inventory_import():
+    file = request.files.get("file")
+
+    if not file:
+        return redirect(url_for("inventory.inventory"))
+
+    rows = read_xlsx_rows(file)
+
+    for row in rows:
+        item = InventoryItem(
+            name=row.get("Nazwa") or "Bez nazwy",
+            quantity=float(row.get("Stan") or 0),
+            unit=row.get("Jednostka") or "szt",
+            notes=row.get("Notatki"),
+        )
+
+        db.session.add(item)
+
+    db.session.commit()
+
+    return redirect(url_for("inventory.inventory"))

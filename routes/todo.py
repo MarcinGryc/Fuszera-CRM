@@ -4,6 +4,7 @@ from extensions import db
 from models import Todo
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
+from routes.import_utils import read_xlsx_rows
 
 todo_bp = Blueprint("todo", __name__)
 
@@ -52,3 +53,27 @@ def todo_export():
         "todo.xlsx",
         [("Todo", ["ID", "Zadanie", "Status"], rows)],
     )
+
+@todo_bp.route("/todo/import", methods=["POST"])
+@login_required
+def todo_import():
+    file = request.files.get("file")
+
+    if not file:
+        return redirect(url_for("todo.todo"))
+
+    rows = read_xlsx_rows(file)
+
+    for row in rows:
+        status = str(row.get("Status", "")).lower()
+
+        item = Todo(
+            task=row.get("Zadanie") or row.get("Task") or "Bez nazwy",
+            done=True if "zrob" in status else False,
+        )
+
+        db.session.add(item)
+
+    db.session.commit()
+
+    return redirect(url_for("todo.todo"))
