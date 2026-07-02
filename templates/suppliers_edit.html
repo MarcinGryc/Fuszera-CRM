@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Edytuj dostawcę</h1>
+
+<div class="card">
+    <form method="post">
+        <label>Nazwa</label>
+        <input name="name" value="{{ supplier.name or '' }}" required>
+
+        <label>Co dostarcza</label>
+        <input name="supplies" value="{{ supplier.supplies or '' }}">
+
+        <label>Email</label>
+        <input name="email" type="email" value="{{ supplier.email or '' }}">
+
+        <label>Telefon</label>
+        <input name="phone" value="{{ supplier.phone or '' }}">
+
+        <label>NIP</label>
+        <input name="nip" value="{{ supplier.nip or '' }}">
+
+        <label>Adres</label>
+        <textarea name="address">{{ supplier.address or "" }}</textarea>
+
+        <label>Notatki</label>
+        <textarea name="notes">{{ supplier.notes or "" }}</textarea>
+
+        <button type="submit">Zapisz zmiany</button>
+        <a class="btn" href="/suppliers">Anuluj</a>
+    </form>
+</div>
+{% endblock %}

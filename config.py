@@ -20,5 +20,5 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    ADMIN_LOGIN = os.environ.get("ADMIN_LOGIN", "admin")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+    ADMIN_LOGIN = os.environ.get("ADMIN_LOGIN", "ziomeczki@fuszera.pl")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Fuszera_2023@")

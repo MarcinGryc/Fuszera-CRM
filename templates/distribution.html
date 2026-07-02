@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Listy dystrybucyjne</h1>
+
+<details>
+    <summary>Dodaj maila do listy</summary>
+
+    <div class="card">
+        <form method="post">
+            <label>Lista</label>
+            <select name="list_type" required>
+                <option value="individual">Klienci indywidualni</option>
+                <option value="b2b">Klienci B2B</option>
+            </select>
+
+            <label>Nazwa / osoba</label>
+            <input name="name">
+
+            <label>Email</label>
+            <input name="email" type="email" required>
+
+            <label>Firma</label>
+            <input name="company">
+
+            <label>Notatki</label>
+            <textarea name="notes"></textarea>
+
+            <button type="submit">Dodaj do listy</button>
+        </form>
+    </div>
+</details>
+
+<details open>
+    <summary>Klienci B2B</summary>
+
+    {% for contact in b2b %}
+    <div class="card">
+        <h3>{{ contact.email }}</h3>
+        <p><strong>Nazwa:</strong> {{ contact.name }}</p>
+        <p><strong>Firma:</strong> {{ contact.company }}</p>
+        <p><strong>Notatki:</strong> {{ contact.notes }}</p>
+
+        <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
+            <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">Brak maili na liście B2B.</p>
+    {% endfor %}
+</details>
+
+<details open>
+    <summary>Klienci indywidualni</summary>
+
+    {% for contact in individual %}
+    <div class="card">
+        <h3>{{ contact.email }}</h3>
+        <p><strong>Nazwa:</strong> {{ contact.name }}</p>
+        <p><strong>Firma:</strong> {{ contact.company }}</p>
+        <p><strong>Notatki:</strong> {{ contact.notes }}</p>
+
+        <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
+            <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">Brak maili na liście klientów indywidualnych.</p>
+    {% endfor %}
+</details>
+
+<div class="export-box">
+    <a class="btn" href="/distribution/export">Eksportuj listy do Excela</a>
+
+    <form method="post" action="/distribution/import" enctype="multipart/form-data" style="margin-top: 15px;">
+        <label>Import list z Excela</label>
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Importuj listę</button>
+    </form>
+</div>
+{% endblock %}

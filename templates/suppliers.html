@@ -26,49 +26,45 @@
             <label>Adres</label>
             <textarea name="address"></textarea>
 
+            <label>Notatki</label>
+            <textarea name="notes"></textarea>
+
             <button type="submit">Dodaj dostawcę</button>
         </form>
     </div>
 </details>
 
-<h2>Lista dostawców</h2>
-
-<table>
-    <tr>
-        <th>Nazwa</th>
-        <th>Co dostarcza</th>
-        <th>Email</th>
-        <th>Telefon</th>
-        <th>NIP</th>
-        <th>Adres</th>
-        <th>Akcja</th>
-    </tr>
+<details open>
+    <summary>Lista dostawców</summary>
 
     {% for supplier in suppliers %}
-    <tr>
-        <td>{{ supplier.name }}</td>
-        <td>{{ supplier.supplies }}</td>
-        <td>{{ supplier.email }}</td>
-        <td>{{ supplier.phone }}</td>
-        <td>{{ supplier.nip }}</td>
-        <td>{{ supplier.address }}</td>
-        <td>
-            <form method="post" action="/suppliers/delete/{{ supplier.id }}">
-                <button class="delete" type="submit" onclick="return confirm('Usunąć dostawcę?')">Usuń</button>
-            </form>
-        </td>
-    </tr>
+    <div class="card">
+        <h3>{{ supplier.name }}</h3>
+        <p><strong>Co dostarcza:</strong> {{ supplier.supplies }}</p>
+        <p><strong>Email:</strong> {{ supplier.email }}</p>
+        <p><strong>Telefon:</strong> {{ supplier.phone }}</p>
+        <p><strong>NIP:</strong> {{ supplier.nip }}</p>
+        <p><strong>Adres:</strong> {{ supplier.address }}</p>
+        <p><strong>Notatki:</strong> {{ supplier.notes }}</p>
+
+        <a class="btn" href="/suppliers/edit/{{ supplier.id }}">Edytuj</a>
+
+        <form method="post" action="/suppliers/delete/{{ supplier.id }}" class="inline">
+            <button class="delete" type="submit" onclick="return confirm('Usunąć dostawcę?')">Usuń</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">Brak dostawców.</p>
     {% endfor %}
-</table>
+</details>
 
 <div class="export-box">
     <a class="btn" href="/suppliers/export">Eksportuj dostawców do Excela</a>
-</div>\
 
-<form method="post" action="/suppliers/import" enctype="multipart/form-data" style="margin-top: 15px;">
-    <label>Import dostawców z Excela</label>
-    <input type="file" name="file" accept=".xlsx" required>
-    <button type="submit">Importuj dostawców</button>
-</form>
-
+    <form method="post" action="/suppliers/import" enctype="multipart/form-data" style="margin-top: 15px;">
+        <label>Import dostawców z Excela</label>
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Importuj dostawców</button>
+    </form>
+</div>
 {% endblock %}

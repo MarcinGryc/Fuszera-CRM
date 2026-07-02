@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Wyślij ofertę</h1>
+
+{% if message %}
+<div class="card">
+    <p class="income"><strong>{{ message }}</strong></p>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="card">
+    <p class="expense"><strong>Błąd:</strong> {{ error }}</p>
+</div>
+{% endif %}
+
+<div class="card">
+    <form method="post">
+        <label>Lista dystrybucyjna</label>
+        <select name="list_type" required>
+            <option value="individual">Klienci indywidualni ({{ individual_count }})</option>
+            <option value="b2b">Klienci B2B ({{ b2b_count }})</option>
+        </select>
+
+        <label>Sposób wysyłki</label>
+        <select name="mode" required>
+            <option value="separate">Osobne maile — polecane</option>
+            <option value="bcc">Jeden mail z ukrytą kopią BCC</option>
+        </select>
+
+        <label>Tytuł maila</label>
+        <input name="subject" required>
+
+        <label>Treść maila</label>
+        <textarea name="body" style="min-height: 260px;" required></textarea>
+
+        <button type="submit" onclick="return confirm('Na pewno wysłać ofertę?')">Wyślij ofertę</button>
+    </form>
+</div>
+{% endblock %}

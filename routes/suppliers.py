@@ -9,6 +9,14 @@ from routes.import_utils import read_xlsx_rows
 suppliers_bp = Blueprint("suppliers", __name__)
 
 
+def clean(value):
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
 @suppliers_bp.route("/suppliers", methods=["GET", "POST"])
 @login_required
 def suppliers():
@@ -20,6 +28,7 @@ def suppliers():
             phone=request.form.get("phone"),
             nip=request.form.get("nip"),
             address=request.form.get("address"),
+            notes=request.form.get("notes"),
         )
         db.session.add(supplier)
         db.session.commit()
@@ -27,6 +36,26 @@ def suppliers():
 
     suppliers_list = Supplier.query.order_by(Supplier.name).all()
     return render_template("suppliers.html", suppliers=suppliers_list)
+
+
+@suppliers_bp.route("/suppliers/edit/<int:supplier_id>", methods=["GET", "POST"])
+@login_required
+def supplier_edit(supplier_id):
+    supplier = Supplier.query.get_or_404(supplier_id)
+
+    if request.method == "POST":
+        supplier.name = request.form.get("name")
+        supplier.supplies = request.form.get("supplies")
+        supplier.email = request.form.get("email")
+        supplier.phone = request.form.get("phone")
+        supplier.nip = request.form.get("nip")
+        supplier.address = request.form.get("address")
+        supplier.notes = request.form.get("notes")
+
+        db.session.commit()
+        return redirect(url_for("suppliers.suppliers"))
+
+    return render_template("supplier_edit.html", supplier=supplier)
 
 
 @suppliers_bp.route("/suppliers/delete/<int:supplier_id>", methods=["POST"])
@@ -44,14 +73,15 @@ def suppliers_export():
     suppliers = Supplier.query.order_by(Supplier.name).all()
 
     rows = [
-        [s.id, s.name, s.supplies, s.email, s.phone, s.nip, s.address]
+        [s.id, s.name, s.supplies, s.email, s.phone, s.nip, s.address, s.notes]
         for s in suppliers
     ]
 
     return export_xlsx(
         "dostawcy.xlsx",
-        [("Dostawcy", ["ID", "Nazwa", "Co dostarcza", "Email", "Telefon", "NIP", "Adres"], rows)],
+        [("Dostawcy", ["ID", "Nazwa", "Co dostarcza", "Email", "Telefon", "NIP", "Adres", "Notatki"], rows)],
     )
+
 
 @suppliers_bp.route("/suppliers/import", methods=["POST"])
 @login_required
@@ -65,16 +95,15 @@ def suppliers_import():
 
     for row in rows:
         supplier = Supplier(
-            name=row.get("Nazwa") or "Bez nazwy",
-            supplies=row.get("Co dostarcza"),
-            email=row.get("Email"),
-            phone=row.get("Telefon"),
-            nip=row.get("NIP"),
-            address=row.get("Adres"),
+            name=clean(row.get("Nazwa")) or "Bez nazwy",
+            supplies=clean(row.get("Co dostarcza")),
+            email=clean(row.get("Email")),
+            phone=clean(row.get("Telefon")),
+            nip=clean(row.get("NIP")),
+            address=clean(row.get("Adres")),
+            notes=clean(row.get("Notatki")),
         )
-
         db.session.add(supplier)
 
     db.session.commit()
-
     return redirect(url_for("suppliers.suppliers"))
