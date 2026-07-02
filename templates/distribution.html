@@ -14,17 +14,8 @@
                 <option value="b2b">Klienci B2B</option>
             </select>
 
-            <label>Nazwa / osoba</label>
-            <input name="name">
-
             <label>Email</label>
             <input name="email" type="email" required>
-
-            <label>Firma</label>
-            <input name="company">
-
-            <label>Notatki</label>
-            <textarea name="notes"></textarea>
 
             <button type="submit">Dodaj do listy</button>
         </form>
@@ -37,16 +28,12 @@
     {% for contact in b2b %}
     <div class="card">
         <h3>{{ contact.email }}</h3>
-        <p><strong>Nazwa:</strong> {{ contact.name }}</p>
-        <p><strong>Firma:</strong> {{ contact.company }}</p>
-        <p><strong>Notatki:</strong> {{ contact.notes }}</p>
-
         <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
-            <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
+            <button class="delete" type="submit">Usuń</button>
         </form>
     </div>
     {% else %}
-    <p class="muted">Brak maili na liście B2B.</p>
+    <p class="muted">Brak maili B2B.</p>
     {% endfor %}
 </details>
 
@@ -56,16 +43,12 @@
     {% for contact in individual %}
     <div class="card">
         <h3>{{ contact.email }}</h3>
-        <p><strong>Nazwa:</strong> {{ contact.name }}</p>
-        <p><strong>Firma:</strong> {{ contact.company }}</p>
-        <p><strong>Notatki:</strong> {{ contact.notes }}</p>
-
         <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
-            <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
+            <button class="delete" type="submit">Usuń</button>
         </form>
     </div>
     {% else %}
-    <p class="muted">Brak maili na liście klientów indywidualnych.</p>
+    <p class="muted">Brak maili indywidualnych.</p>
     {% endfor %}
 </details>
 

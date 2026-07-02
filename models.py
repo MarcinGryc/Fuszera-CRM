@@ -87,14 +87,13 @@ class Supplier(db.Model):
     phone = db.Column(db.String(100))
     nip = db.Column(db.String(50))
     address = db.Column(db.Text)
-    notes = db.Column(db.Text)
 
 
 class DistributionContact(db.Model):
     __tablename__ = "distribution_contacts"
 
     id = db.Column(db.Integer, primary_key=True)
-    list_type = db.Column(db.String(30), nullable=False)  # individual / b2b
+    list_type = db.Column(db.String(30), nullable=False)
     name = db.Column(db.String(255))
     email = db.Column(db.String(255), nullable=False)
     company = db.Column(db.String(255))
