@@ -37,41 +37,43 @@
         }
 
         .nav-inner {
-            max-width: 1250px;
-            margin: auto;
-            padding: 14px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-        }
+    max-width: 1250px;
+    margin: auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
 
-        .brand {
-            color: var(--pink);
-            font-weight: 900;
-            letter-spacing: 1px;
-            text-decoration: none;
-            font-size: 20px;
-            white-space: nowrap;
-        }
+.brand {
+    color: var(--pink);
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-decoration: none;
+    font-size: 18px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
 
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 4px;
+}
 
-        .nav-links a {
-            color: var(--text);
-            text-decoration: none;
-            padding: 9px 12px;
-            border-radius: 999px;
-            font-weight: bold;
-            font-size: 14px;
-            transition: 0.15s ease;
-        }
+.nav-links a {
+    color: var(--text);
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-weight: bold;
+    font-size: 13px;
+    transition: 0.15s ease;
+    flex-shrink: 0;
+}
 
         .nav-links a:hover {
             background: rgba(255, 182, 217, 0.13);

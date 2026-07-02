@@ -28,7 +28,6 @@ def suppliers():
             phone=request.form.get("phone"),
             nip=request.form.get("nip"),
             address=request.form.get("address"),
-            notes=request.form.get("notes"),
         )
         db.session.add(supplier)
         db.session.commit()
@@ -50,7 +49,6 @@ def supplier_edit(supplier_id):
         supplier.phone = request.form.get("phone")
         supplier.nip = request.form.get("nip")
         supplier.address = request.form.get("address")
-        supplier.notes = request.form.get("notes")
 
         db.session.commit()
         return redirect(url_for("suppliers.suppliers"))
@@ -73,13 +71,13 @@ def suppliers_export():
     suppliers = Supplier.query.order_by(Supplier.name).all()
 
     rows = [
-        [s.id, s.name, s.supplies, s.email, s.phone, s.nip, s.address, s.notes]
+        [s.id, s.name, s.supplies, s.email, s.phone, s.nip, s.address]
         for s in suppliers
     ]
 
     return export_xlsx(
         "dostawcy.xlsx",
-        [("Dostawcy", ["ID", "Nazwa", "Co dostarcza", "Email", "Telefon", "NIP", "Adres", "Notatki"], rows)],
+        [("Dostawcy", ["ID", "Nazwa", "Co dostarcza", "Email", "Telefon", "NIP", "Adres"], rows)],
     )
 
 
@@ -101,7 +99,6 @@ def suppliers_import():
             phone=clean(row.get("Telefon")),
             nip=clean(row.get("NIP")),
             address=clean(row.get("Adres")),
-            notes=clean(row.get("Notatki")),
         )
         db.session.add(supplier)
 
