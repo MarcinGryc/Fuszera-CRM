@@ -28,8 +28,9 @@
     {% for contact in b2b %}
     <div class="card">
         <h3>{{ contact.email }}</h3>
+
         <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
-            <button class="delete" type="submit">Usuń</button>
+            <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
         </form>
     </div>
     {% else %}
@@ -43,8 +44,9 @@
     {% for contact in individual %}
     <div class="card">
         <h3>{{ contact.email }}</h3>
+
         <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
-            <button class="delete" type="submit">Usuń</button>
+            <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
         </form>
     </div>
     {% else %}

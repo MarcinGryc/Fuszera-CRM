@@ -27,22 +27,21 @@
         }
 
         nav {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(23, 23, 27, 0.92);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid rgba(255, 182, 217, 0.18);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.28);
-        }
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(23, 23, 27, 0.96);
+    border-bottom: 1px solid rgba(255, 182, 217, 0.18);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+}
 
-        .nav-inner {
+.nav-inner {
     max-width: 1250px;
     margin: auto;
     padding: 12px 20px;
     display: flex;
-    align-items: center;
-    gap: 18px;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .brand {
@@ -50,42 +49,37 @@
     font-weight: 900;
     letter-spacing: 1px;
     text-decoration: none;
-    font-size: 18px;
-    white-space: nowrap;
-    flex-shrink: 0;
+    font-size: 20px;
 }
 
 .nav-links {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding-bottom: 4px;
+    gap: 8px;
 }
 
 .nav-links a {
     color: var(--text);
     text-decoration: none;
-    padding: 8px 10px;
+    padding: 8px 11px;
     border-radius: 999px;
     font-weight: bold;
     font-size: 13px;
     transition: 0.15s ease;
-    flex-shrink: 0;
+    background: rgba(255,255,255,0.03);
 }
 
-        .nav-links a:hover {
-            background: rgba(255, 182, 217, 0.13);
-            color: var(--pink);
-        }
+.nav-links a:hover {
+    background: rgba(255, 182, 217, 0.16);
+    color: var(--pink);
+}
 
-        .nav-links .logout {
-            background: rgba(255, 182, 217, 0.16);
-            color: var(--pink);
-            border: 1px solid rgba(255, 182, 217, 0.25);
-        }
-
+.nav-links .logout {
+    background: rgba(255, 182, 217, 0.18);
+    color: var(--pink);
+    border: 1px solid rgba(255, 182, 217, 0.25);
+}
         main {
             padding: 30px;
             max-width: 1250px;

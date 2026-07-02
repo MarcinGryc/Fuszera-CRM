@@ -44,5 +44,24 @@ app = create_app()
 with app.app_context():
     db.create_all()
 
+    # Tymczasowa naprawa istniejącej bazy na Renderze:
+    # dodaje brakującą kolumnę notes do suppliers, jeśli tabela już istniała.
+    try:
+        with db.engine.connect() as conn:
+            if db.engine.url.get_backend_name().startswith("postgresql"):
+                conn.exec_driver_sql(
+                    "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS notes TEXT"
+                )
+                conn.commit()
+            else:
+                columns = conn.exec_driver_sql("PRAGMA table_info(suppliers)").fetchall()
+                column_names = [column[1] for column in columns]
+
+                if "notes" not in column_names:
+                    conn.exec_driver_sql("ALTER TABLE suppliers ADD COLUMN notes TEXT")
+                    conn.commit()
+    except Exception as error:
+        print("Supplier migration skipped:", error)
+
 if __name__ == "__main__":
     app.run(debug=True)
