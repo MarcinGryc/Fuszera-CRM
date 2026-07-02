@@ -103,22 +103,40 @@ def clients_import():
     if not file:
         return redirect(url_for("clients.clients"))
 
+    def clean(value):
+        if value is None:
+            return ""
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value).strip()
+
     rows = read_xlsx_rows(file)
 
     for row in rows:
+        raw_type = clean(row.get("Typ")).lower()
+        client_type = "b2b" if raw_type == "b2b" else "individual"
+
+        name = (
+            clean(row.get("Nazwa/osoba"))
+            or clean(row.get("Nazwa"))
+            or clean(row.get("Imię i nazwisko"))
+            or clean(row.get("Osoba"))
+            or clean(row.get("Firma"))
+            or "Brak nazwy"
+        )
+
         client = Client(
-            type="b2b" if str(row.get("Typ", "")).lower() == "b2b" else "individual",
-            name=row.get("Nazwa/osoba") or row.get("Nazwa") or row.get("Imię i nazwisko") or "Brak nazwy",
-            company=row.get("Firma"),
-            nip=row.get("NIP"),
-            email=row.get("Email"),
-            phone=row.get("Telefon"),
-            address=row.get("Adres"),
-            notes=row.get("Notatki"),
+            type=client_type,
+            name=name,
+            company=clean(row.get("Firma")),
+            nip=clean(row.get("NIP")),
+            email=clean(row.get("Email")),
+            phone=clean(row.get("Telefon")),
+            address=clean(row.get("Adres")),
+            notes=clean(row.get("Notatki")),
         )
 
         db.session.add(client)
 
     db.session.commit()
-
     return redirect(url_for("clients.clients"))
