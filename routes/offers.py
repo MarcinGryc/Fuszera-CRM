@@ -25,34 +25,33 @@ def get_smtp_config():
     }
 
 
+def smtp_connect(cfg, timeout=30):
+    if cfg["security"] == "ssl":
+        server = smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=timeout)
+    else:
+        server = smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout)
+        server.ehlo()
+        if cfg["security"] == "starttls":
+            server.starttls()
+            server.ehlo()
+
+    server.login(cfg["user"], cfg["password"])
+    return server
+
+
 def test_smtp_connection():
     cfg = get_smtp_config()
 
     if not all([cfg["host"], cfg["port"], cfg["user"], cfg["password"], cfg["from_email"]]):
         raise RuntimeError("Brakuje konfiguracji SMTP w zmiennych środowiskowych.")
 
-    timeout = 12
-
     try:
-        socket.create_connection((cfg["host"], cfg["port"]), timeout=timeout).close()
+        socket.create_connection((cfg["host"], cfg["port"]), timeout=10).close()
     except Exception as e:
         raise RuntimeError(f"Nie mogę połączyć się z {cfg['host']}:{cfg['port']}. Szczegóły: {e}")
 
-    if cfg["security"] == "ssl":
-        with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=timeout) as server:
-            server.login(cfg["user"], cfg["password"])
-            server.noop()
-    elif cfg["security"] == "starttls":
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(cfg["user"], cfg["password"])
-            server.noop()
-    else:
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
-            server.login(cfg["user"], cfg["password"])
-            server.noop()
+    with smtp_connect(cfg, timeout=30) as server:
+        server.noop()
 
 
 def send_offer_email(subject, body, recipients, mode):
@@ -61,9 +60,7 @@ def send_offer_email(subject, body, recipients, mode):
     if not all([cfg["host"], cfg["port"], cfg["user"], cfg["password"], cfg["from_email"]]):
         raise RuntimeError("Brakuje konfiguracji SMTP w zmiennych środowiskowych.")
 
-    timeout = 5
-
-    def send_batch(server):
+    with smtp_connect(cfg, timeout=60) as server:
         if mode == "bcc":
             msg = EmailMessage()
             msg["Subject"] = subject
@@ -72,6 +69,7 @@ def send_offer_email(subject, body, recipients, mode):
             msg["Bcc"] = ", ".join(recipients)
             msg.set_content(body)
             server.send_message(msg)
+
         else:
             for recipient in recipients:
                 msg = EmailMessage()
@@ -80,22 +78,6 @@ def send_offer_email(subject, body, recipients, mode):
                 msg["To"] = recipient
                 msg.set_content(body)
                 server.send_message(msg)
-
-    if cfg["security"] == "ssl":
-        with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=timeout) as server:
-            server.login(cfg["user"], cfg["password"])
-            send_batch(server)
-    elif cfg["security"] == "starttls":
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(cfg["user"], cfg["password"])
-            send_batch(server)
-    else:
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
-            server.login(cfg["user"], cfg["password"])
-            send_batch(server)
 
 
 @offers_bp.route("/offers", methods=["GET", "POST"])
@@ -124,7 +106,7 @@ def offers():
                     )
                 ).scalars().all()
 
-                recipients = sorted({email.strip() for email in recipients if email})
+                recipients = sorted({email.strip() for email in recipients if email and "@" in email})
 
                 if not recipients:
                     raise RuntimeError("Wybrana lista jest pusta.")
