@@ -20,5 +20,10 @@ class Config:
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+    }
+
     ADMIN_LOGIN = os.environ.get("ADMIN_LOGIN", "ziomeczki@fuszera.pl")
     ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Fuszera_2023@")
