@@ -1,5 +1,6 @@
 import os
 import smtplib
+import socket
 from email.message import EmailMessage
 
 from flask import Blueprint, render_template, request
@@ -12,48 +13,89 @@ from routes.auth import login_required
 offers_bp = Blueprint("offers", __name__)
 
 
-def send_offer_email(subject, body, recipients, mode):
-    smtp_host = os.environ.get("SMTP_HOST")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ.get("SMTP_USER")
-    smtp_password = os.environ.get("SMTP_PASSWORD")
-    smtp_from = os.environ.get("SMTP_FROM", smtp_user)
-    smtp_from_name = os.environ.get("SMTP_FROM_NAME", "Fuszera")
+def get_smtp_config():
+    return {
+        "host": os.environ.get("SMTP_HOST"),
+        "port": int(os.environ.get("SMTP_PORT", "587")),
+        "security": os.environ.get("SMTP_SECURITY", "starttls").lower(),
+        "user": os.environ.get("SMTP_USER"),
+        "password": os.environ.get("SMTP_PASSWORD"),
+        "from_email": os.environ.get("SMTP_FROM") or os.environ.get("SMTP_USER"),
+        "from_name": os.environ.get("SMTP_FROM_NAME", "Fuszera Coffee"),
+    }
 
-    if not all([smtp_host, smtp_user, smtp_password, smtp_from]):
+
+def test_smtp_connection():
+    cfg = get_smtp_config()
+
+    if not all([cfg["host"], cfg["port"], cfg["user"], cfg["password"], cfg["from_email"]]):
         raise RuntimeError("Brakuje konfiguracji SMTP w zmiennych środowiskowych.")
 
-    timeout = 20
+    timeout = 12
 
-    if mode == "bcc":
-        msg = EmailMessage()
-        msg["Subject"] = subject
-        msg["From"] = f"{smtp_from_name} <{smtp_from}>"
-        msg["To"] = smtp_from
-        msg["Bcc"] = ", ".join(recipients)
-        msg.set_content(body)
+    try:
+        socket.create_connection((cfg["host"], cfg["port"]), timeout=timeout).close()
+    except Exception as e:
+        raise RuntimeError(f"Nie mogę połączyć się z {cfg['host']}:{cfg['port']}. Szczegóły: {e}")
 
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=timeout) as server:
+    if cfg["security"] == "ssl":
+        with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=timeout) as server:
+            server.login(cfg["user"], cfg["password"])
+            server.noop()
+    elif cfg["security"] == "starttls":
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
-
+            server.login(cfg["user"], cfg["password"])
+            server.noop()
     else:
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=timeout) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(smtp_user, smtp_password)
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
+            server.login(cfg["user"], cfg["password"])
+            server.noop()
 
+
+def send_offer_email(subject, body, recipients, mode):
+    cfg = get_smtp_config()
+
+    if not all([cfg["host"], cfg["port"], cfg["user"], cfg["password"], cfg["from_email"]]):
+        raise RuntimeError("Brakuje konfiguracji SMTP w zmiennych środowiskowych.")
+
+    timeout = 5
+
+    def send_batch(server):
+        if mode == "bcc":
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = f"{cfg['from_name']} <{cfg['from_email']}>"
+            msg["To"] = cfg["from_email"]
+            msg["Bcc"] = ", ".join(recipients)
+            msg.set_content(body)
+            server.send_message(msg)
+        else:
             for recipient in recipients:
                 msg = EmailMessage()
                 msg["Subject"] = subject
-                msg["From"] = f"{smtp_from_name} <{smtp_from}>"
+                msg["From"] = f"{cfg['from_name']} <{cfg['from_email']}>"
                 msg["To"] = recipient
                 msg.set_content(body)
                 server.send_message(msg)
+
+    if cfg["security"] == "ssl":
+        with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=timeout) as server:
+            server.login(cfg["user"], cfg["password"])
+            send_batch(server)
+    elif cfg["security"] == "starttls":
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(cfg["user"], cfg["password"])
+            send_batch(server)
+    else:
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=timeout) as server:
+            server.login(cfg["user"], cfg["password"])
+            send_batch(server)
 
 
 @offers_bp.route("/offers", methods=["GET", "POST"])
@@ -63,27 +105,34 @@ def offers():
     error = None
 
     if request.method == "POST":
-        list_type = request.form.get("list_type")
-        subject = request.form.get("subject")
-        body = request.form.get("body")
-        mode = request.form.get("mode")
+        action = request.form.get("action")
 
         try:
-            recipients = db.session.execute(
-                select(DistributionContact.email).where(
-                    DistributionContact.list_type == list_type
-                )
-            ).scalars().all()
+            if action == "test_smtp":
+                test_smtp_connection()
+                message = "Połączenie SMTP działa poprawnie."
 
-            recipients = sorted({email.strip() for email in recipients if email})
+            elif action == "send_offer":
+                list_type = request.form.get("list_type")
+                subject = request.form.get("subject")
+                body = request.form.get("body")
+                mode = request.form.get("mode")
 
-            if not recipients:
-                raise RuntimeError("Wybrana lista jest pusta.")
+                recipients = db.session.execute(
+                    select(DistributionContact.email).where(
+                        DistributionContact.list_type == list_type
+                    )
+                ).scalars().all()
 
-            db.session.close()
+                recipients = sorted({email.strip() for email in recipients if email})
 
-            send_offer_email(subject, body, recipients, mode)
-            message = f"Wysłano ofertę do {len(recipients)} adresów."
+                if not recipients:
+                    raise RuntimeError("Wybrana lista jest pusta.")
+
+                db.session.close()
+
+                send_offer_email(subject, body, recipients, mode)
+                message = f"Wysłano ofertę do {len(recipients)} adresów."
 
         except Exception as e:
             error = str(e)
