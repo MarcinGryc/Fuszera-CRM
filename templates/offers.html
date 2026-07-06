@@ -16,26 +16,53 @@
 {% endif %}
 
 <div class="card">
+
     <form method="post">
+
         <label>Lista dystrybucyjna</label>
-        <select name="list_type" required>
-            <option value="individual">Klienci indywidualni ({{ individual_count }})</option>
-            <option value="b2b">Klienci B2B ({{ b2b_count }})</option>
+        <select name="list_type">
+            <option value="individual">
+                Klienci indywidualni ({{ individual_count }})
+            </option>
+
+            <option value="b2b">
+                Klienci B2B ({{ b2b_count }})
+            </option>
         </select>
 
         <label>Sposób wysyłki</label>
-        <select name="mode" required>
-            <option value="separate">Osobne maile — polecane</option>
-            <option value="bcc">Jeden mail z ukrytą kopią BCC</option>
+        <select name="mode">
+            <option value="bcc">Jeden mail (BCC)</option>
+            <option value="separate">Osobne maile</option>
         </select>
 
         <label>Tytuł maila</label>
-        <input name="subject" required>
+        <input type="text" name="subject" required>
 
-        <label>Treść maila</label>
-        <textarea name="body" style="min-height: 260px;" required></textarea>
+        <label>Treść</label>
+        <textarea name="body" style="min-height:260px;" required></textarea>
 
-        <button type="submit" onclick="return confirm('Na pewno wysłać ofertę?')">Wyślij ofertę</button>
+        <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+
+            <button
+                type="submit"
+                name="action"
+                value="send_offer"
+                onclick="return confirm('Na pewno wysłać ofertę?')">
+                📧 Wyślij ofertę
+            </button>
+
+            <button
+                type="submit"
+                name="action"
+                value="test_smtp">
+                🔌 Testuj SMTP
+            </button>
+
+        </div>
+
     </form>
+
 </div>
+
 {% endblock %}
