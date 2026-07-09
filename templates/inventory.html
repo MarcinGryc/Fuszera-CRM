@@ -3,6 +3,13 @@
 {% block content %}
 <h1>Magazyn</h1>
 
+<form method="get" class="card">
+    <label>Szukaj w magazynie</label>
+    <input name="q" value="{{ q or '' }}" placeholder="Nazwa, jednostka, notatki...">
+    <button type="submit">Szukaj</button>
+    <a class="btn" href="/inventory">Wyczyść</a>
+</form>
+
 <div class="card">
     <h2>Dodaj przedmiot</h2>
 

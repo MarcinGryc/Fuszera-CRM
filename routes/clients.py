@@ -9,6 +9,14 @@ from routes.import_utils import read_xlsx_rows
 clients_bp = Blueprint("clients", __name__)
 
 
+def clean(value):
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
 @clients_bp.route("/clients", methods=["GET", "POST"])
 @login_required
 def clients():
@@ -27,10 +35,26 @@ def clients():
         db.session.commit()
         return redirect(url_for("clients.clients"))
 
-    b2b = Client.query.filter_by(type="b2b").order_by(Client.id.desc()).all()
-    individual = Client.query.filter_by(type="individual").order_by(Client.id.desc()).all()
+    q = request.args.get("q", "").strip()
+    query = Client.query
 
-    return render_template("clients.html", b2b=b2b, individual=individual)
+    if q:
+        search = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                Client.name.ilike(search),
+                Client.company.ilike(search),
+                Client.email.ilike(search),
+                Client.phone.ilike(search),
+                Client.nip.ilike(search),
+                Client.address.ilike(search),
+            )
+        )
+
+    b2b = query.filter_by(type="b2b").order_by(Client.id.desc()).all()
+    individual = query.filter_by(type="individual").order_by(Client.id.desc()).all()
+
+    return render_template("clients.html", b2b=b2b, individual=individual, q=q)
 
 
 @clients_bp.route("/clients/<int:client_id>")
@@ -77,23 +101,24 @@ def clients_export():
 
     rows = [
         [
-            client.id,
-            "B2B" if client.type == "b2b" else "Indywidualny",
-            client.name,
-            client.company,
-            client.nip,
-            client.email,
-            client.phone,
-            client.address,
-            client.notes,
+            c.id,
+            "B2B" if c.type == "b2b" else "Indywidualny",
+            c.name,
+            c.company,
+            c.nip,
+            c.email,
+            c.phone,
+            c.address,
+            c.notes,
         ]
-        for client in clients
+        for c in clients
     ]
 
     return export_xlsx(
         "klienci.xlsx",
         [("Klienci", ["ID", "Typ", "Nazwa/osoba", "Firma", "NIP", "Email", "Telefon", "Adres", "Notatki"], rows)],
     )
+
 
 @clients_bp.route("/clients/import", methods=["POST"])
 @login_required
@@ -102,13 +127,6 @@ def clients_import():
 
     if not file:
         return redirect(url_for("clients.clients"))
-
-    def clean(value):
-        if value is None:
-            return ""
-        if isinstance(value, float) and value.is_integer():
-            return str(int(value))
-        return str(value).strip()
 
     rows = read_xlsx_rows(file)
 

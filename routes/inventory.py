@@ -23,8 +23,21 @@ def inventory():
         db.session.commit()
         return redirect(url_for("inventory.inventory"))
 
-    items = InventoryItem.query.order_by(InventoryItem.name).all()
-    return render_template("inventory.html", items=items)
+    q = request.args.get("q", "").strip()
+    query = InventoryItem.query
+
+    if q:
+        search = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                InventoryItem.name.ilike(search),
+                InventoryItem.unit.ilike(search),
+                InventoryItem.notes.ilike(search),
+            )
+        )
+
+    items = query.order_by(InventoryItem.name).all()
+    return render_template("inventory.html", items=items, q=q)
 
 
 @inventory_bp.route("/inventory/update/<int:item_id>", methods=["POST"])
@@ -49,13 +62,13 @@ def inventory_delete(item_id):
 @login_required
 def inventory_export():
     items = InventoryItem.query.order_by(InventoryItem.name).all()
-
     rows = [[i.id, i.name, i.quantity, i.unit, i.notes] for i in items]
 
     return export_xlsx(
         "magazyn.xlsx",
         [("Magazyn", ["ID", "Nazwa", "Stan", "Jednostka", "Notatki"], rows)],
     )
+
 
 @inventory_bp.route("/inventory/import", methods=["POST"])
 @login_required
@@ -74,9 +87,7 @@ def inventory_import():
             unit=row.get("Jednostka") or "szt",
             notes=row.get("Notatki"),
         )
-
         db.session.add(item)
 
     db.session.commit()
-
     return redirect(url_for("inventory.inventory"))

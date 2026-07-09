@@ -33,8 +33,24 @@ def suppliers():
         db.session.commit()
         return redirect(url_for("suppliers.suppliers"))
 
-    suppliers_list = Supplier.query.order_by(Supplier.name).all()
-    return render_template("suppliers.html", suppliers=suppliers_list)
+    q = request.args.get("q", "").strip()
+    query = Supplier.query
+
+    if q:
+        search = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                Supplier.name.ilike(search),
+                Supplier.supplies.ilike(search),
+                Supplier.email.ilike(search),
+                Supplier.phone.ilike(search),
+                Supplier.nip.ilike(search),
+                Supplier.address.ilike(search),
+            )
+        )
+
+    suppliers_list = query.order_by(Supplier.name).all()
+    return render_template("suppliers.html", suppliers=suppliers_list, q=q)
 
 
 @suppliers_bp.route("/suppliers/edit/<int:supplier_id>", methods=["GET", "POST"])
@@ -49,7 +65,6 @@ def supplier_edit(supplier_id):
         supplier.phone = request.form.get("phone")
         supplier.nip = request.form.get("nip")
         supplier.address = request.form.get("address")
-
         db.session.commit()
         return redirect(url_for("suppliers.suppliers"))
 

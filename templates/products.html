@@ -3,6 +3,13 @@
 {% block content %}
 <h1>Produkty</h1>
 
+<form method="get" class="card">
+    <label>Szukaj produktów</label>
+    <input name="q" value="{{ q or '' }}" placeholder="Nazwa, gramatura...">
+    <button type="submit">Szukaj</button>
+    <a class="btn" href="/products">Wyczyść</a>
+</form>
+
 <div class="card">
     <h2>Dodaj produkt</h2>
 

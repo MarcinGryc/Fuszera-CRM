@@ -22,8 +22,20 @@ def products():
         db.session.commit()
         return redirect(url_for("products.products"))
 
-    products_list = Product.query.order_by(Product.id.desc()).all()
-    return render_template("products.html", products=products_list)
+    q = request.args.get("q", "").strip()
+    query = Product.query
+
+    if q:
+        search = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                Product.name.ilike(search),
+                Product.weight.ilike(search),
+            )
+        )
+
+    products_list = query.order_by(Product.id.desc()).all()
+    return render_template("products.html", products=products_list, q=q)
 
 
 @products_bp.route("/products/delete/<int:product_id>", methods=["POST"])
@@ -39,13 +51,13 @@ def product_delete(product_id):
 @login_required
 def products_export():
     products = Product.query.order_by(Product.name).all()
-
     rows = [[p.id, p.name, p.weight, p.price] for p in products]
 
     return export_xlsx(
         "produkty.xlsx",
         [("Produkty", ["ID", "Nazwa", "Gramatura", "Cena"], rows)],
     )
+
 
 @products_bp.route("/products/import", methods=["POST"])
 @login_required
@@ -63,9 +75,7 @@ def products_import():
             weight=row.get("Gramatura"),
             price=float(row.get("Cena") or 0),
         )
-
         db.session.add(product)
 
     db.session.commit()
-
     return redirect(url_for("products.products"))

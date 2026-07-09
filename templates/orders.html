@@ -3,6 +3,13 @@
 {% block content %}
 <h1>Historia zamówień</h1>
 
+<form method="get" class="card">
+    <label>Szukaj zamówień</label>
+    <input name="q" value="{{ q or '' }}" placeholder="Klient, firma, email, telefon, notatki...">
+    <button type="submit">Szukaj</button>
+    <a class="btn" href="/orders">Wyczyść</a>
+</form>
+
 <details>
     <summary>Dodaj zamówienie</summary>
 

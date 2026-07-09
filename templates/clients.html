@@ -3,6 +3,13 @@
 {% block content %}
 <h1>Klienci</h1>
 
+<form method="get" class="card">
+    <label>Szukaj klientów</label>
+    <input name="q" value="{{ q or '' }}" placeholder="Imię, firma, email, telefon, NIP...">
+    <button type="submit">Szukaj</button>
+    <a class="btn" href="/clients">Wyczyść</a>
+</form>
+
 <details>
     <summary>Dodaj klienta</summary>
 
