@@ -46,12 +46,16 @@ def test_smtp_connection():
         raise RuntimeError("Brakuje konfiguracji SMTP w zmiennych środowiskowych.")
 
     try:
-        socket.create_connection((cfg["host"], cfg["port"]), timeout=10).close()
-    except Exception as e:
-        raise RuntimeError(f"Nie mogę połączyć się z {cfg['host']}:{cfg['port']}. Szczegóły: {e}")
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=30) as server:
+            server.set_debuglevel(1)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(cfg["user"], cfg["password"])
+            server.noop()
 
-    with smtp_connect(cfg, timeout=30) as server:
-        server.noop()
+    except Exception as e:
+        raise RuntimeError(f"SMTP TEST ERROR: {repr(e)}")
 
 
 def send_offer_email(subject, body, recipients, mode):
