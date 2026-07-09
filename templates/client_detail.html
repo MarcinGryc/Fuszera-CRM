@@ -1,23 +1,110 @@
-<h2>Historia zamówień klienta</h2>
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Karta klienta</h1>
+
+<div class="grid">
+    <div class="card">
+        <h2>{{ client.company or client.name }}</h2>
+
+        <p><strong>Typ:</strong> {{ "B2B" if client.type == "b2b" else "Indywidualny" }}</p>
+
+        {% if client.name %}
+        <p><strong>Osoba:</strong> {{ client.name }}</p>
+        {% endif %}
+
+        {% if client.nip %}
+        <p><strong>NIP:</strong> {{ client.nip }}</p>
+        {% endif %}
+
+        {% if client.email %}
+        <p><strong>Email:</strong> {{ client.email }}</p>
+        {% endif %}
+
+        {% if client.phone %}
+        <p><strong>Telefon:</strong> {{ client.phone }}</p>
+        {% endif %}
+
+        {% if client.address %}
+        <p><strong>Adres:</strong><br>{{ client.address }}</p>
+        {% endif %}
+
+        {% if client.notes %}
+        <p><strong>Notatki:</strong><br>{{ client.notes }}</p>
+        {% endif %}
+
+        <a class="btn" href="/clients/edit/{{ client.id }}">Edytuj klienta</a>
+        <a class="btn" href="/clients">Wróć do klientów</a>
+    </div>
+
+    <div class="card">
+        <h2>Podsumowanie</h2>
+
+        {% set total_value = namespace(value=0) %}
+        {% set total_items = namespace(value=0) %}
+
+        {% for order in orders %}
+            {% set total_value.value = total_value.value + order.total %}
+            {% for item in order.items %}
+                {% set total_items.value = total_items.value + item.quantity %}
+            {% endfor %}
+        {% endfor %}
+
+        <div class="grid">
+            <div class="card">
+                <h3>Liczba zamówień</h3>
+                <div class="stat">{{ orders|length }}</div>
+            </div>
+
+            <div class="card">
+                <h3>Sztuk łącznie</h3>
+                <div class="stat">{{ total_items.value }}</div>
+            </div>
+
+            <div class="card">
+                <h3>Wartość łącznie</h3>
+                <div class="stat">{{ "%.2f"|format(total_value.value) }} zł</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2>Historia zamówień</h2>
 
 {% for order in orders %}
-<div class="card">
-    <h3>Zamówienie z dnia {{ order.order_date }}</h3>
+<details open class="card">
+    <summary>
+        Zamówienie z {{ order.order_date }} — {{ "%.2f"|format(order.total) }} zł
+    </summary>
 
-    <p><strong>Produkty:</strong></p>
+    <table style="margin-top: 15px;">
+        <tr>
+            <th>Produkt</th>
+            <th>Ilość</th>
+            <th>Wartość</th>
+        </tr>
 
-    {% for item in order.items %}
-        <p>
-            {{ item.product_name }}
-            × {{ item.quantity }}
-            = {{ "%.2f"|format(item.line_total) }} zł
-        </p>
-    {% endfor %}
+        {% for item in order.items %}
+        <tr>
+            <td>{{ item.product_name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ "%.2f"|format(item.line_total) }} zł</td>
+        </tr>
+        {% endfor %}
+    </table>
 
-    <p><strong>Wartość:</strong> {{ "%.2f"|format(order.total) }} zł</p>
-    <p><strong>Data:</strong> {{ order.order_date }}</p>
-    <p><strong>Notatki:</strong> {{ order.notes }}</p>
-</div>
+    {% if order.notes %}
+    <div style="margin-top: 15px;">
+        <strong>Notatki:</strong>
+        <p>{{ order.notes }}</p>
+    </div>
+    {% endif %}
+</details>
 {% else %}
-<p class="muted">Ten klient nie ma jeszcze zamówień.</p>
+<div class="card">
+    <p class="muted">Ten klient nie ma jeszcze żadnych zamówień.</p>
+</div>
 {% endfor %}
+
+{% endblock %}
