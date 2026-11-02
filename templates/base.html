@@ -209,6 +209,35 @@
             content: "▾ ";
         }
 
+        details.inline-editor {
+            display: inline-block;
+            margin: 0;
+        }
+
+        details.inline-editor summary {
+            display: inline-block;
+            margin: 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            background: var(--pink);
+            color: #1f1f24;
+            font-size: 14px;
+            line-height: normal;
+        }
+
+        details.inline-editor summary::before {
+            content: "";
+        }
+
+        details.inline-editor[open] summary {
+            background: var(--pink2);
+        }
+
+        .inline-editor-panel {
+            margin-top: 12px;
+            text-align: left;
+        }
+
         .export-box {
             margin-top: 35px;
             padding-top: 20px;

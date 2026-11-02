@@ -81,7 +81,7 @@
     <tr>
         <th>Data</th>
         <th>Źródło / płatność</th>
-        <th>Klient</th>
+        <th>Tytuł</th>
         <th>Produkty</th>
         <th>Wartość</th>
         <th>Notatki</th>
@@ -105,7 +105,18 @@
                 —
             {% endif %}
         </td>
-        <td>{{ order.client.company if order.client and order.client.company else (order.client.name if order.client else "Brak") }}</td>
+        <td>
+            Zamówienie #{{ order.id }}:
+            {% if order.items %}
+                {% for item in order.items %}
+                    {{ item.product_name }} × {{ item.quantity }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            {% elif order.product_name %}
+                {{ order.product_name }} × {{ order.quantity or 1 }}
+            {% else %}
+                Bez nazwy produktu
+            {% endif %}
+        </td>
         <td>
             {% if order.items %}
             {% for item in order.items %}

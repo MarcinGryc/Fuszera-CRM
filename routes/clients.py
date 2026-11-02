@@ -73,24 +73,21 @@ def client_detail(client_id):
     return render_template("client_detail.html", client=client, orders=orders)
 
 
-@clients_bp.route("/clients/edit/<int:client_id>", methods=["GET", "POST"])
+@clients_bp.route("/clients/edit/<int:client_id>", methods=["POST"])
 @login_required
 def client_edit(client_id):
     client = Client.query.get_or_404(client_id)
 
-    if request.method == "POST":
-        client.type = request.form.get("type")
-        client.name = request.form.get("name")
-        client.company = request.form.get("company")
-        client.nip = request.form.get("nip")
-        client.email = request.form.get("email")
-        client.phone = request.form.get("phone")
-        client.address = request.form.get("address")
-        client.notes = request.form.get("notes")
-        db.session.commit()
-        return redirect(url_for("clients.clients"))
-
-    return render_template("client_edit.html", client=client)
+    client.type = request.form.get("type")
+    client.name = request.form.get("name")
+    client.company = request.form.get("company")
+    client.nip = request.form.get("nip")
+    client.email = request.form.get("email")
+    client.phone = request.form.get("phone")
+    client.address = request.form.get("address")
+    client.notes = request.form.get("notes")
+    db.session.commit()
+    return redirect(url_for("clients.clients", q=request.form.get("q", "")))
 
 
 @clients_bp.route("/clients/delete/<int:client_id>", methods=["POST"])

@@ -43,16 +43,13 @@
         <td>{{ product["weight"] }}</td>
         <td>{{ "%.2f"|format(product["price"]) }} zł</td>
         <td>
-            <form method="post" action="/products/delete/{{ product['id'] }}">
+            <form method="post" action="/products/delete/{{ product['id'] }}" class="inline">
                 <button class="delete" type="submit">Usuń</button>
             </form>
-        </td>
-    </tr>
-    <tr>
-        <td colspan="4">
-            <details class="product-editor">
-                <summary>Rozwiń edycję: {{ product["name"] }}</summary>
-                <form method="post" action="/products/edit/{{ product['id'] }}" class="card">
+
+            <details class="inline-editor">
+                <summary>Edytuj</summary>
+                <form method="post" action="/products/edit/{{ product['id'] }}" class="card inline-editor-panel">
                     <input type="hidden" name="q" value="{{ q or '' }}">
                     <label>Nazwa produktu</label>
                     <input name="name" value="{{ product['name'] }}" required>

@@ -291,7 +291,13 @@ def receive_shop_order():
             db.session.add(
                 Finance(
                     type="income",
-                    title=f"Zamówienie sklepowe {data['order_number']}",
+                    title=(
+                        f"Zamówienie sklepowe {data['order_number']}: "
+                        + ", ".join(
+                            f"{name} × {quantity}"
+                            for name, _, quantity, _ in data["items"]
+                        )
+                    )[:255],
                     amount=crm_order.total,
                     date=data["paid_date"],
                     source_ref=finance_ref,

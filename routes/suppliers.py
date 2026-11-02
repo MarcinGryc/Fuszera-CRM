@@ -53,22 +53,19 @@ def suppliers():
     return render_template("suppliers.html", suppliers=suppliers_list, q=q)
 
 
-@suppliers_bp.route("/suppliers/edit/<int:supplier_id>", methods=["GET", "POST"])
+@suppliers_bp.route("/suppliers/edit/<int:supplier_id>", methods=["POST"])
 @login_required
 def supplier_edit(supplier_id):
     supplier = Supplier.query.get_or_404(supplier_id)
 
-    if request.method == "POST":
-        supplier.name = request.form.get("name")
-        supplier.supplies = request.form.get("supplies")
-        supplier.email = request.form.get("email")
-        supplier.phone = request.form.get("phone")
-        supplier.nip = request.form.get("nip")
-        supplier.address = request.form.get("address")
-        db.session.commit()
-        return redirect(url_for("suppliers.suppliers"))
-
-    return render_template("supplier_edit.html", supplier=supplier)
+    supplier.name = request.form.get("name")
+    supplier.supplies = request.form.get("supplies")
+    supplier.email = request.form.get("email")
+    supplier.phone = request.form.get("phone")
+    supplier.nip = request.form.get("nip")
+    supplier.address = request.form.get("address")
+    db.session.commit()
+    return redirect(url_for("suppliers.suppliers", q=request.form.get("q", "")))
 
 
 @suppliers_bp.route("/suppliers/delete/<int:supplier_id>", methods=["POST"])

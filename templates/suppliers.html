@@ -50,11 +50,35 @@
         <p><strong>NIP:</strong> {{ supplier.nip }}</p>
         <p><strong>Adres:</strong> {{ supplier.address }}</p>
 
-        <a class="btn" href="/suppliers/edit/{{ supplier.id }}">Edytuj</a>
-
         <form method="post" action="/suppliers/delete/{{ supplier.id }}" class="inline">
             <button class="delete" type="submit" onclick="return confirm('Usunąć dostawcę?')">Usuń</button>
         </form>
+
+        <details class="inline-editor">
+            <summary>Edytuj</summary>
+            <form method="post" action="/suppliers/edit/{{ supplier.id }}" class="card inline-editor-panel">
+                <input type="hidden" name="q" value="{{ q or '' }}">
+                <label>Nazwa</label>
+                <input name="name" value="{{ supplier.name or '' }}" required>
+
+                <label>Co dostarcza</label>
+                <input name="supplies" value="{{ supplier.supplies or '' }}">
+
+                <label>Email</label>
+                <input name="email" type="email" value="{{ supplier.email or '' }}">
+
+                <label>Telefon</label>
+                <input name="phone" value="{{ supplier.phone or '' }}">
+
+                <label>NIP</label>
+                <input name="nip" value="{{ supplier.nip or '' }}">
+
+                <label>Adres</label>
+                <textarea name="address">{{ supplier.address or "" }}</textarea>
+
+                <button type="submit">Zapisz zmiany</button>
+            </form>
+        </details>
     </div>
     {% else %}
     <p class="muted">Brak dostawców.</p>

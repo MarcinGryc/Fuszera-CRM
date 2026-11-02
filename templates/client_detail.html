@@ -34,8 +34,40 @@
         <p><strong>Notatki:</strong><br>{{ client.notes }}</p>
         {% endif %}
 
-        <a class="btn" href="/clients/edit/{{ client.id }}">Edytuj klienta</a>
         <a class="btn" href="/clients">Wróć do klientów</a>
+        <details class="inline-editor">
+            <summary>Edytuj</summary>
+            <form method="post" action="/clients/edit/{{ client.id }}" class="card inline-editor-panel">
+                <label>Typ klienta</label>
+                <select name="type" required>
+                    <option value="b2b" {% if client.type == "b2b" %}selected{% endif %}>B2B</option>
+                    <option value="individual" {% if client.type == "individual" %}selected{% endif %}>Indywidualny</option>
+                </select>
+
+                <label>Imię i nazwisko / osoba kontaktowa</label>
+                <input name="name" value="{{ client.name or '' }}" required>
+
+                <label>Firma</label>
+                <input name="company" value="{{ client.company or '' }}">
+
+                <label>NIP</label>
+                <input name="nip" value="{{ client.nip or '' }}">
+
+                <label>Email</label>
+                <input name="email" type="email" value="{{ client.email or '' }}">
+
+                <label>Telefon</label>
+                <input name="phone" value="{{ client.phone or '' }}">
+
+                <label>Adres</label>
+                <textarea name="address">{{ client.address or "" }}</textarea>
+
+                <label>Notatki</label>
+                <textarea name="notes">{{ client.notes or "" }}</textarea>
+
+                <button type="submit">Zapisz zmiany</button>
+            </form>
+        </details>
     </div>
 
     <div class="card">

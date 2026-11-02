@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from flask import abort
@@ -18,14 +18,9 @@ def current_month():
     return datetime.now(ZoneInfo("Europe/Warsaw")).strftime("%Y-%m")
 
 
-def previous_month():
-    first_of_month = datetime.now(ZoneInfo("Europe/Warsaw")).replace(day=1)
-    return (first_of_month - timedelta(days=1)).strftime("%Y-%m")
-
-
 def selected_month(value):
     if value is None:
-        return previous_month()
+        return current_month()
     try:
         return datetime.strptime(value, "%Y-%m").strftime("%Y-%m")
     except ValueError:

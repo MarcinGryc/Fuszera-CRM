@@ -13,9 +13,9 @@ os.environ["SHOP_WEBHOOK_SECRET"] = "test-webhook-secret-" * 2
 import app as app_module
 from app import create_app, ensure_additive_schema
 from extensions import db
-from models import Client, Finance, Order, OrderItem, Product
+from models import Client, Finance, Order, OrderItem, Product, Supplier
 from routes.coffee import calculate_price
-from routes.order_metrics import current_month, previous_month
+from routes.order_metrics import current_month
 from routes.offers import send_offer_email, test_email_connection as check_email_connection
 
 
@@ -119,6 +119,10 @@ class ShopOrderSyncTests(unittest.TestCase):
             finance = Finance.query.one()
             self.assertEqual(finance.amount, 95.83)
             self.assertEqual(finance.date, "2026-11-02")
+            self.assertEqual(
+                finance.title, "Zamówienie sklepowe F-000123: Kawa 250 g × 2"
+            )
+            self.assertNotIn("Jan Kowalski", finance.title)
 
     def test_invalid_signature_does_not_create_order(self):
         event = shop_event("created-event", "pending")
@@ -152,7 +156,16 @@ class ShopOrderSyncTests(unittest.TestCase):
         with self.app.app_context():
             self.assertEqual(Order.query.filter_by(source="manual").count(), 1)
             self.assertEqual(Finance.query.count(), 1)
-            self.assertEqual(Finance.query.one().amount, 20.0)
+            finance = Finance.query.one()
+            self.assertEqual(finance.amount, 20.0)
+            self.assertEqual(finance.title, "Zamówienie ręczne #1: Kawa 250 g × 2")
+
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        orders_page = self.client.get("/orders").get_data(as_text=True)
+        self.assertIn("<th>Tytuł</th>", orders_page)
+        self.assertIn("Zamówienie #1:", orders_page)
+        self.assertNotIn("<th>Klient</th>", orders_page)
 
     def test_manual_order_rejects_non_finite_price_without_finance_entry(self):
         with self.client.session_transaction() as session:
@@ -256,11 +269,10 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertEqual(dashboard_response.status_code, 200)
         self.assertIn("1.500 kg", dashboard_page)
         self.assertIn("139.00 zł", dashboard_page)
-        self.assertIn("40.00 zł", dashboard_page)
-        self.assertIn("35.00 zł", dashboard_page)
-        self.assertIn("10.00 zł", dashboard_page)
-        self.assertIn("104.00 zł", dashboard_page)
-        self.assertIn("30.00 zł", dashboard_page)
+        self.assertNotIn("W tym miesiącu", dashboard_page)
+        self.assertNotIn('name="month"', dashboard_page)
+        self.assertNotIn(f"— {month}", dashboard_page)
+        self.assertNotIn("Pokaż miesiąc", dashboard_page)
 
         previous_finances = self.client.get("/finances?month=2020-01")
         previous_page = previous_finances.get_data(as_text=True)
@@ -270,12 +282,12 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("74.00 zł", previous_page)
         self.assertIn('value="2020-01"', previous_page)
 
-    def test_month_selection_defaults_to_previous_calendar_month(self):
+    def test_month_selection_defaults_to_current_calendar_month(self):
         with self.client.session_transaction() as session:
             session["logged_in"] = True
         response = self.client.get("/finances")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f'value="{previous_month()}"', response.get_data(as_text=True))
+        self.assertIn(f'value="{current_month()}"', response.get_data(as_text=True))
         self.assertEqual(self.client.get("/finances?month=not-a-month").status_code, 400)
 
     def test_product_can_be_edited_from_expanding_product_row(self):
@@ -290,7 +302,10 @@ class ShopOrderSyncTests(unittest.TestCase):
         page = self.client.get("/products?q=Kawa")
         page_text = page.get_data(as_text=True)
         self.assertEqual(page.status_code, 200)
-        self.assertIn("Rozwiń edycję: Kawa testowa", page_text)
+        self.assertIn("<summary>Edytuj</summary>", page_text)
+        delete_position = page_text.index(f'action="/products/delete/{product_id}"')
+        edit_position = page_text.index(f'action="/products/edit/{product_id}"')
+        self.assertLess(delete_position, edit_position)
         self.assertIn(f'action="/products/edit/{product_id}"', page_text)
 
         response = self.client.post(
@@ -304,6 +319,67 @@ class ShopOrderSyncTests(unittest.TestCase):
             self.assertEqual(product.name, "Kawa zmieniona")
             self.assertEqual(product.weight, "1 kg")
             self.assertEqual(product.price, 45.5)
+
+    def test_clients_and_suppliers_edit_inline_after_delete_button(self):
+        with self.app.app_context():
+            client = Client(type="b2b", name="Anna Nowak", company="Kawa Test")
+            supplier = Supplier(name="Palarnia Test", supplies="Ziarno")
+            db.session.add_all((client, supplier))
+            db.session.commit()
+            client_id, supplier_id = client.id, supplier.id
+
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+
+        clients_page = self.client.get("/clients?q=Kawa")
+        clients_html = clients_page.get_data(as_text=True)
+        self.assertEqual(clients_page.status_code, 200)
+        delete_position = clients_html.index(f'action="/clients/delete/{client_id}"')
+        edit_position = clients_html.index(f'action="/clients/edit/{client_id}"')
+        self.assertLess(delete_position, edit_position)
+        self.assertIn("<summary>Edytuj</summary>", clients_html)
+        self.assertEqual(self.client.get(f"/clients/edit/{client_id}").status_code, 405)
+        response = self.client.post(
+            f"/clients/edit/{client_id}",
+            data={
+                "type": "b2b",
+                "name": "Anna Nowak",
+                "company": "Kawa Nowa",
+                "nip": "",
+                "email": "",
+                "phone": "",
+                "address": "",
+                "notes": "",
+                "q": "Kawa",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/clients?q=Kawa", response.headers["Location"])
+
+        suppliers_page = self.client.get("/suppliers?q=Palarnia")
+        suppliers_html = suppliers_page.get_data(as_text=True)
+        self.assertEqual(suppliers_page.status_code, 200)
+        delete_position = suppliers_html.index(f'action="/suppliers/delete/{supplier_id}"')
+        edit_position = suppliers_html.index(f'action="/suppliers/edit/{supplier_id}"')
+        self.assertLess(delete_position, edit_position)
+        self.assertIn("<summary>Edytuj</summary>", suppliers_html)
+        response = self.client.post(
+            f"/suppliers/edit/{supplier_id}",
+            data={
+                "name": "Palarnia Zmieniona",
+                "supplies": "Kawa zielona",
+                "email": "",
+                "phone": "",
+                "nip": "",
+                "address": "",
+                "q": "Palarnia",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/suppliers?q=Palarnia", response.headers["Location"])
+        self.assertEqual(self.client.get(f"/suppliers/edit/{supplier_id}").status_code, 405)
+        with self.app.app_context():
+            self.assertEqual(db.session.get(Supplier, supplier_id).name, "Palarnia Zmieniona")
 
     def test_b2b_price_is_discounted_from_b2c_price(self):
         retail = calculate_price(40, 0.25, 0, 0.60)

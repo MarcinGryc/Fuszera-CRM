@@ -102,7 +102,12 @@ def orders():
         db.session.add(
             Finance(
                 type="income",
-                title=f"Zamówienie ręczne #{order.id}",
+                title=(
+                    f"Zamówienie ręczne #{order.id}: "
+                    + ", ".join(
+                        f"{name} × {quantity}" for name, _, quantity, _ in parsed_items
+                    )
+                )[:255],
                 amount=order.total,
                 date=order.order_date,
             )
