@@ -8,6 +8,7 @@ from models import Finance
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
 from routes.import_utils import read_xlsx_rows
+from routes.order_metrics import current_month, income_totals
 
 finances_bp = Blueprint("finances", __name__)
 
@@ -28,11 +29,18 @@ def finances():
 
     items = Finance.query.order_by(Finance.date.desc(), Finance.id.desc()).all()
 
-    income = db.session.query(func.coalesce(func.sum(Finance.amount), 0)).filter(Finance.type == "income").scalar()
+    income, month_income = income_totals(current_month())
     expense = db.session.query(func.coalesce(func.sum(Finance.amount), 0)).filter(Finance.type == "expense").scalar()
     balance = income - expense
 
-    return render_template("finances.html", items=items, income=income, expense=expense, balance=balance)
+    return render_template(
+        "finances.html",
+        items=items,
+        income=income,
+        month_income=month_income,
+        expense=expense,
+        balance=balance,
+    )
 
 
 @finances_bp.route("/finances/delete/<int:item_id>", methods=["POST"])

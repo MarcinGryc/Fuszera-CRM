@@ -11,11 +11,17 @@ konfiguracyjnych repozytorium. Sklep podpisuje surowe bajty JSON nagłówkiem
 `X-Fuszera-Signature` (HMAC-SHA256) i czasem z `X-Fuszera-Timestamp`; CRM
 odrzuca podpisy starsze niż pięć minut.
 
-Zamówienie jest tworzone w CRM przy zdarzeniu `order.created`, a kolejne
-zdarzenia `order.updated` zmieniają jego status płatności. Przychód jest
-księgowany wyłącznie dla statusu `paid` i zawiera kwotę całkowitą sklepu wraz z
-dostawą. Ponowienia nie tworzą kolejnego zamówienia ani wpisu finansowego.
-Zamówienia sklepowe są chronione przed usunięciem z widoku CRM.
+Zdarzenia oczekujące na płatność nie tworzą zamówień ani kart klientów w CRM.
+Zamówienie jest tworzone w CRM dopiero po zdarzeniu ze statusem `paid`.
+Nieopłacone rekordy, które trafiły do CRM przed tą zmianą, pozostają w bazie,
+ale są ukryte w listach i eksporcie; nie są kasowane. Po opłaceniu zamówienie
+zostanie pokazane po odebraniu aktualizacji statusu.
+
+Przychód jest księgowany wyłącznie dla statusu `paid` i zawiera kwotę całkowitą
+sklepu wraz z dostawą. Ponowienia nie tworzą kolejnego zamówienia ani wpisu
+finansowego. Zamówienia sklepowe są chronione przed usunięciem z widoku CRM.
+Podsumowania sprzedaży kawy liczą zamówienia ręczne i opłacone zamówienia
+sklepowe; gramatura jest odczytywana z produktu lub nazwy pozycji.
 
 Przy uruchomieniu CRM wykonuje wyłącznie idempotentne, addytywne zmiany schematu:
 dodaje brakujące kolumny oraz unikalne indeksy. Nie usuwa tabel, kolumn ani

@@ -51,8 +51,29 @@
 <div class="grid">
     <a class="card-link" href="/finances">
         <div class="card">
-            <h3>Przychody</h3>
+            <h3>Przychody — łącznie</h3>
             <div class="stat income">{{ "%.2f"|format(income) }} zł</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Przychody — w tym miesiącu</h3>
+            <div class="stat income">{{ "%.2f"|format(month_income) }} zł</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/orders">
+        <div class="card">
+            <h3>Sprzedana kawa — łącznie</h3>
+            <div class="stat">{{ "%.3f"|format(total_kg) }} kg</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/orders">
+        <div class="card">
+            <h3>Sprzedana kawa — w tym miesiącu</h3>
+            <div class="stat">{{ "%.3f"|format(month_kg) }} kg</div>
         </div>
     </a>
 

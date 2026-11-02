@@ -61,7 +61,15 @@ def clients():
 @login_required
 def client_detail(client_id):
     client = Client.query.get_or_404(client_id)
-    orders = sorted(client.orders, key=lambda order: (order.order_date, order.id), reverse=True)
+    orders = sorted(
+        (
+            order
+            for order in client.orders
+            if order.source != "shop" or order.payment_status == "paid"
+        ),
+        key=lambda order: (order.order_date, order.id),
+        reverse=True,
+    )
     return render_template("client_detail.html", client=client, orders=orders)
 
 

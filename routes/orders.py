@@ -7,6 +7,7 @@ from extensions import db
 from models import Client, Finance, Order, OrderItem, Product
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
+from routes.order_metrics import current_month, sold_coffee_weight
 
 orders_bp = Blueprint("orders", __name__)
 
@@ -110,7 +111,9 @@ def orders():
         return redirect(url_for("orders.orders"))
 
     q = request.args.get("q", "").strip()
-    orders_query = Order.query
+    orders_query = Order.query.filter(
+        db.or_(Order.source != "shop", Order.payment_status == "paid")
+    )
 
     if q:
         search = f"%{q}%"
@@ -127,8 +130,20 @@ def orders():
     orders_list = orders_query.order_by(Order.order_date.desc(), Order.id.desc()).all()
     clients = Client.query.order_by(Client.name).all()
     products = Product.query.order_by(Product.name).all()
+    all_orders = Order.query.filter(
+        db.or_(Order.source != "shop", Order.payment_status == "paid")
+    ).all()
+    total_kg, month_kg = sold_coffee_weight(all_orders, products, current_month())
 
-    return render_template("orders.html", orders=orders_list, clients=clients, products=products, q=q)
+    return render_template(
+        "orders.html",
+        orders=orders_list,
+        clients=clients,
+        products=products,
+        q=q,
+        total_kg=total_kg,
+        month_kg=month_kg,
+    )
 
 
 @orders_bp.route("/orders/delete/<int:order_id>", methods=["POST"])
@@ -145,7 +160,9 @@ def order_delete(order_id):
 @orders_bp.route("/orders/export")
 @login_required
 def orders_export():
-    orders = Order.query.order_by(Order.order_date.desc(), Order.id.desc()).all()
+    orders = Order.query.filter(
+        db.or_(Order.source != "shop", Order.payment_status == "paid")
+    ).order_by(Order.order_date.desc(), Order.id.desc()).all()
 
     order_rows = []
     item_rows = []

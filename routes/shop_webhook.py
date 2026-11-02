@@ -189,6 +189,14 @@ def receive_shop_order():
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
         return jsonify(error=str(error)), 400
 
+    crm_order = (
+        Order.query.filter_by(source="shop", external_id=data["external_id"])
+        .with_for_update()
+        .first()
+    )
+    if crm_order is None and data["status"] != "paid":
+        return jsonify(status="received", eventId=data["event_id"]), 200
+
     email = data["customer"]["email"].casefold()
     client = Client.query.filter(func.lower(Client.email) == email).order_by(Client.id).first()
     if client is None:
@@ -223,11 +231,6 @@ def receive_shop_order():
                 if part
             )
 
-    crm_order = (
-        Order.query.filter_by(source="shop", external_id=data["external_id"])
-        .with_for_update()
-        .first()
-    )
     if crm_order is None:
         first_item = data["items"][0]
         crm_order = Order(
@@ -235,7 +238,7 @@ def receive_shop_order():
             product_name=first_item[0],
             quantity=first_item[2],
             total=data["total"],
-            order_date=data["created_date"],
+            order_date=data["paid_date"],
             notes="\n".join(
                 part
                 for part in (
@@ -279,6 +282,8 @@ def receive_shop_order():
             )
     elif STATUS_PRIORITY[data["status"]] > STATUS_PRIORITY[crm_order.payment_status]:
         crm_order.payment_status = data["status"]
+        if crm_order.payment_status == "paid":
+            crm_order.order_date = data["paid_date"]
 
     if crm_order.payment_status == "paid":
         finance_ref = f"shop:{data['external_id']}"

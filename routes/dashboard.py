@@ -4,6 +4,7 @@ from sqlalchemy import func
 from extensions import db
 from models import Client, Finance, InventoryItem, Order, Product, Todo
 from routes.auth import login_required
+from routes.order_metrics import current_month, income_totals, sold_coffee_weight
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -11,11 +12,8 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/")
 @login_required
 def index():
-    income = (
-        db.session.query(func.coalesce(func.sum(Finance.amount), 0))
-        .filter(Finance.type == "income")
-        .scalar()
-    )
+    month = current_month()
+    income, month_income = income_totals(month)
 
     expense = (
         db.session.query(func.coalesce(func.sum(Finance.amount), 0))
@@ -28,7 +26,11 @@ def index():
     individual_count = Client.query.filter_by(type="individual").count()
     b2b_count = Client.query.filter_by(type="b2b").count()
     products_count = Product.query.count()
-    orders_count = Order.query.count()
+    orders = Order.query.filter(
+        db.or_(Order.source != "shop", Order.payment_status == "paid")
+    ).all()
+    orders_count = len(orders)
+    total_kg, month_kg = sold_coffee_weight(orders, Product.query.all(), month)
     inventory_count = InventoryItem.query.count()
 
     todos = (
@@ -44,6 +46,9 @@ def index():
     return render_template(
         "index.html",
         income=income,
+        month_income=month_income,
+        total_kg=total_kg,
+        month_kg=month_kg,
         expense=expense,
         balance=balance,
         individual_count=individual_count,

@@ -13,8 +13,9 @@ os.environ["SHOP_WEBHOOK_SECRET"] = "test-webhook-secret-" * 2
 import app as app_module
 from app import create_app, ensure_additive_schema
 from extensions import db
-from models import Finance, Order, OrderItem
+from models import Client, Finance, Order, OrderItem, Product
 from routes.coffee import calculate_price
+from routes.order_metrics import current_month
 from routes.offers import send_offer_email, test_email_connection as check_email_connection
 
 
@@ -99,9 +100,8 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertEqual(created.status_code, 200)
 
         with self.app.app_context():
-            order = Order.query.filter_by(source="shop", external_id="a" * 32).one()
-            self.assertEqual(order.payment_status, "pending")
-            self.assertEqual(OrderItem.query.filter_by(order_id=order.id).count(), 1)
+            self.assertEqual(Order.query.filter_by(source="shop").count(), 0)
+            self.assertEqual(Client.query.count(), 0)
             self.assertEqual(Finance.query.count(), 0)
 
         paid_event = shop_event("paid-event", "paid", "2026-11-02T11:00:00.000Z")
@@ -111,7 +111,10 @@ class ShopOrderSyncTests(unittest.TestCase):
 
         with self.app.app_context():
             self.assertEqual(Order.query.filter_by(source="shop").count(), 1)
-            self.assertEqual(Order.query.one().payment_status, "paid")
+            order = Order.query.one()
+            self.assertEqual(order.payment_status, "paid")
+            self.assertEqual(order.order_date, "2026-11-02")
+            self.assertEqual(OrderItem.query.filter_by(order_id=order.id).count(), 1)
             self.assertEqual(Finance.query.count(), 1)
             finance = Finance.query.one()
             self.assertEqual(finance.amount, 95.83)
@@ -168,6 +171,86 @@ class ShopOrderSyncTests(unittest.TestCase):
         with self.app.app_context():
             self.assertEqual(Order.query.count(), 0)
             self.assertEqual(Finance.query.count(), 0)
+
+    def test_orders_page_shows_monthly_and_total_coffee_weight_for_paid_orders(self):
+        month = current_month()
+        with self.app.app_context():
+            product = Product(name="Kawa klasyczna", weight="250 g", price=20)
+            db.session.add(product)
+            manual_order = Order(
+                product_name="Kawa klasyczna",
+                quantity=4,
+                total=80,
+                order_date=f"{month}-02",
+                source="manual",
+                payment_status="manual",
+            )
+            paid_order = Order(
+                product_name="Kawa 250 g",
+                quantity=2,
+                total=40,
+                order_date=f"{month}-03",
+                source="shop",
+                external_id="b" * 32,
+                payment_status="paid",
+            )
+            pending_order = Order(
+                product_name="Kawa 250 g",
+                quantity=100,
+                total=2000,
+                order_date=f"{month}-04",
+                source="shop",
+                external_id="c" * 32,
+                payment_status="pending",
+                notes="UNPAID-ORDER",
+            )
+            db.session.add_all((manual_order, paid_order, pending_order))
+            db.session.add(
+                OrderItem(
+                    order=paid_order,
+                    product_name="Kawa 250 g",
+                    unit_price=20,
+                    quantity=2,
+                    line_total=40,
+                )
+            )
+            db.session.add(
+                OrderItem(
+                    order=pending_order,
+                    product_name="Kawa 250 g",
+                    unit_price=20,
+                    quantity=100,
+                    line_total=2000,
+                )
+            )
+            db.session.add_all(
+                (
+                    Finance(type="income", title="Historyczny", amount=99, date="2020-01-01"),
+                    Finance(type="income", title="Bieżący", amount=40, date=f"{month}-03"),
+                )
+            )
+            db.session.commit()
+
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        response = self.client.get("/orders")
+        page = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("1.500 kg", page)
+        self.assertNotIn("UNPAID-ORDER", page)
+
+        finance_response = self.client.get("/finances")
+        finance_page = finance_response.get_data(as_text=True)
+        self.assertEqual(finance_response.status_code, 200)
+        self.assertIn("139.00 zł", finance_page)
+        self.assertIn("40.00 zł", finance_page)
+
+        dashboard_response = self.client.get("/")
+        dashboard_page = dashboard_response.get_data(as_text=True)
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertIn("1.500 kg", dashboard_page)
+        self.assertIn("139.00 zł", dashboard_page)
+        self.assertIn("40.00 zł", dashboard_page)
 
     def test_b2b_price_is_discounted_from_b2c_price(self):
         retail = calculate_price(40, 0.25, 0, 0.60)
