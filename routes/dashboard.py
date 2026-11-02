@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 
 from extensions import db
 from models import Client, InventoryItem, Order, Product, Todo
 from routes.auth import login_required
-from routes.order_metrics import current_month, finance_totals, sold_coffee_weight
+from routes.order_metrics import finance_totals, selected_month, sold_coffee_weight
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -11,7 +11,7 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/")
 @login_required
 def index():
-    month = current_month()
+    month = selected_month(request.args.get("month"))
     totals = finance_totals(month)
 
     individual_count = Client.query.filter_by(type="individual").count()
@@ -37,6 +37,7 @@ def index():
     return render_template(
         "index.html",
         **totals,
+        selected_month=month,
         total_kg=total_kg,
         month_kg=month_kg,
         individual_count=individual_count,

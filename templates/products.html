@@ -48,6 +48,26 @@
             </form>
         </td>
     </tr>
+    <tr>
+        <td colspan="4">
+            <details class="product-editor">
+                <summary>Rozwiń edycję: {{ product["name"] }}</summary>
+                <form method="post" action="/products/edit/{{ product['id'] }}" class="card">
+                    <input type="hidden" name="q" value="{{ q or '' }}">
+                    <label>Nazwa produktu</label>
+                    <input name="name" value="{{ product['name'] }}" required>
+
+                    <label>Gramatura</label>
+                    <input name="weight" value="{{ product['weight'] or '' }}" placeholder="np. 250 g">
+
+                    <label>Cena</label>
+                    <input name="price" type="number" step="0.01" min="0" value="{{ '%.2f'|format(product['price']) }}" required>
+
+                    <button type="submit">Zapisz zmiany</button>
+                </form>
+            </details>
+        </td>
+    </tr>
     {% endfor %}
 </table>
 

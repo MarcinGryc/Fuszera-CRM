@@ -15,7 +15,7 @@ from app import create_app, ensure_additive_schema
 from extensions import db
 from models import Client, Finance, Order, OrderItem, Product
 from routes.coffee import calculate_price
-from routes.order_metrics import current_month
+from routes.order_metrics import current_month, previous_month
 from routes.offers import send_offer_email, test_email_connection as check_email_connection
 
 
@@ -241,7 +241,7 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("1.500 kg", page)
         self.assertNotIn("UNPAID-ORDER", page)
 
-        finance_response = self.client.get("/finances")
+        finance_response = self.client.get(f"/finances?month={month}")
         finance_page = finance_response.get_data(as_text=True)
         self.assertEqual(finance_response.status_code, 200)
         self.assertIn("139.00 zł", finance_page)
@@ -251,7 +251,7 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("104.00 zł", finance_page)
         self.assertIn("30.00 zł", finance_page)
 
-        dashboard_response = self.client.get("/")
+        dashboard_response = self.client.get(f"/?month={month}")
         dashboard_page = dashboard_response.get_data(as_text=True)
         self.assertEqual(dashboard_response.status_code, 200)
         self.assertIn("1.500 kg", dashboard_page)
@@ -261,6 +261,49 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("10.00 zł", dashboard_page)
         self.assertIn("104.00 zł", dashboard_page)
         self.assertIn("30.00 zł", dashboard_page)
+
+        previous_finances = self.client.get("/finances?month=2020-01")
+        previous_page = previous_finances.get_data(as_text=True)
+        self.assertEqual(previous_finances.status_code, 200)
+        self.assertIn("99.00 zł", previous_page)
+        self.assertIn("25.00 zł", previous_page)
+        self.assertIn("74.00 zł", previous_page)
+        self.assertIn('value="2020-01"', previous_page)
+
+    def test_month_selection_defaults_to_previous_calendar_month(self):
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        response = self.client.get("/finances")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'value="{previous_month()}"', response.get_data(as_text=True))
+        self.assertEqual(self.client.get("/finances?month=not-a-month").status_code, 400)
+
+    def test_product_can_be_edited_from_expanding_product_row(self):
+        with self.app.app_context():
+            product = Product(name="Kawa testowa", weight="250 g", price=20)
+            db.session.add(product)
+            db.session.commit()
+            product_id = product.id
+
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        page = self.client.get("/products?q=Kawa")
+        page_text = page.get_data(as_text=True)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Rozwiń edycję: Kawa testowa", page_text)
+        self.assertIn(f'action="/products/edit/{product_id}"', page_text)
+
+        response = self.client.post(
+            f"/products/edit/{product_id}",
+            data={"name": "Kawa zmieniona", "weight": "1 kg", "price": "45.50", "q": "Kawa"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/products?q=Kawa", response.headers["Location"])
+        with self.app.app_context():
+            product = db.session.get(Product, product_id)
+            self.assertEqual(product.name, "Kawa zmieniona")
+            self.assertEqual(product.weight, "1 kg")
+            self.assertEqual(product.price, 45.5)
 
     def test_b2b_price_is_discounted_from_b2c_price(self):
         retail = calculate_price(40, 0.25, 0, 0.60)

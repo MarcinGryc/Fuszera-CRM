@@ -1,4 +1,6 @@
-from flask import Blueprint, redirect, render_template, request, url_for
+from math import isfinite
+
+from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from extensions import db
 from models import Product
@@ -45,6 +47,26 @@ def product_delete(product_id):
     db.session.delete(product)
     db.session.commit()
     return redirect(url_for("products.products"))
+
+
+@products_bp.route("/products/edit/<int:product_id>", methods=["POST"])
+@login_required
+def product_edit(product_id):
+    product = Product.query.get_or_404(product_id)
+    name = request.form.get("name", "").strip()
+    weight = request.form.get("weight", "").strip()
+    try:
+        price = float(request.form.get("price", ""))
+    except ValueError:
+        abort(400, "Podaj prawidłową cenę produktu.")
+    if not name or not isfinite(price) or price < 0:
+        abort(400, "Nazwa i cena produktu muszą być prawidłowe.")
+
+    product.name = name
+    product.weight = weight
+    product.price = price
+    db.session.commit()
+    return redirect(url_for("products.products", q=request.form.get("q", "")))
 
 
 @products_bp.route("/products/export")

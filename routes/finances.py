@@ -7,7 +7,7 @@ from models import Finance
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
 from routes.import_utils import read_xlsx_rows
-from routes.order_metrics import current_month, finance_totals
+from routes.order_metrics import finance_totals, selected_month
 
 finances_bp = Blueprint("finances", __name__)
 
@@ -28,11 +28,13 @@ def finances():
 
     items = Finance.query.order_by(Finance.date.desc(), Finance.id.desc()).all()
 
-    totals = finance_totals(current_month())
+    month = selected_month(request.args.get("month"))
+    totals = finance_totals(month)
 
     return render_template(
         "finances.html",
         items=items,
+        selected_month=month,
         **totals,
     )
 

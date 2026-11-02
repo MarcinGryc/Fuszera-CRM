@@ -1,7 +1,8 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from flask import abort
 from sqlalchemy import func
 
 from models import Finance, Product
@@ -15,6 +16,20 @@ WEIGHT_PATTERN = re.compile(
 
 def current_month():
     return datetime.now(ZoneInfo("Europe/Warsaw")).strftime("%Y-%m")
+
+
+def previous_month():
+    first_of_month = datetime.now(ZoneInfo("Europe/Warsaw")).replace(day=1)
+    return (first_of_month - timedelta(days=1)).strftime("%Y-%m")
+
+
+def selected_month(value):
+    if value is None:
+        return previous_month()
+    try:
+        return datetime.strptime(value, "%Y-%m").strftime("%Y-%m")
+    except ValueError:
+        abort(400, "Wybierz prawidłowy miesiąc.")
 
 
 def weight_in_kg(value):
