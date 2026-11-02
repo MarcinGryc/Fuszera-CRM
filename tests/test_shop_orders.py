@@ -227,6 +227,8 @@ class ShopOrderSyncTests(unittest.TestCase):
                 (
                     Finance(type="income", title="Historyczny", amount=99, date="2020-01-01"),
                     Finance(type="income", title="Bieżący", amount=40, date=f"{month}-03"),
+                    Finance(type="expense", title="Stary wydatek", amount=25, date="2020-01-01"),
+                    Finance(type="expense", title="Wydatek bieżący", amount=10, date=f"{month}-03"),
                 )
             )
             db.session.commit()
@@ -244,6 +246,10 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertEqual(finance_response.status_code, 200)
         self.assertIn("139.00 zł", finance_page)
         self.assertIn("40.00 zł", finance_page)
+        self.assertIn("35.00 zł", finance_page)
+        self.assertIn("10.00 zł", finance_page)
+        self.assertIn("104.00 zł", finance_page)
+        self.assertIn("30.00 zł", finance_page)
 
         dashboard_response = self.client.get("/")
         dashboard_page = dashboard_response.get_data(as_text=True)
@@ -251,6 +257,10 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("1.500 kg", dashboard_page)
         self.assertIn("139.00 zł", dashboard_page)
         self.assertIn("40.00 zł", dashboard_page)
+        self.assertIn("35.00 zł", dashboard_page)
+        self.assertIn("10.00 zł", dashboard_page)
+        self.assertIn("104.00 zł", dashboard_page)
+        self.assertIn("30.00 zł", dashboard_page)
 
     def test_b2b_price_is_discounted_from_b2c_price(self):
         retail = calculate_price(40, 0.25, 0, 0.60)

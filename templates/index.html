@@ -52,7 +52,7 @@
     <a class="card-link" href="/finances">
         <div class="card">
             <h3>Przychody — łącznie</h3>
-            <div class="stat income">{{ "%.2f"|format(income) }} zł</div>
+            <div class="stat income">{{ "%.2f"|format(total_income) }} zł</div>
         </div>
     </a>
 
@@ -60,6 +60,34 @@
         <div class="card">
             <h3>Przychody — w tym miesiącu</h3>
             <div class="stat income">{{ "%.2f"|format(month_income) }} zł</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Wydatki — łącznie</h3>
+            <div class="stat expense">{{ "%.2f"|format(total_expense) }} zł</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Wydatki — w tym miesiącu</h3>
+            <div class="stat expense">{{ "%.2f"|format(month_expense) }} zł</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Bilans — łącznie</h3>
+            <div class="stat">{{ "%.2f"|format(total_balance) }} zł</div>
+        </div>
+    </a>
+
+    <a class="card-link" href="/finances">
+        <div class="card">
+            <h3>Bilans — w tym miesiącu</h3>
+            <div class="stat">{{ "%.2f"|format(month_balance) }} zł</div>
         </div>
     </a>
 
@@ -77,19 +105,6 @@
         </div>
     </a>
 
-    <a class="card-link" href="/finances">
-        <div class="card">
-            <h3>Wydatki</h3>
-            <div class="stat expense">{{ "%.2f"|format(expense) }} zł</div>
-        </div>
-    </a>
-
-    <a class="card-link" href="/finances">
-        <div class="card">
-            <h3>Bilans konta</h3>
-            <div class="stat">{{ "%.2f"|format(balance) }} zł</div>
-        </div>
-    </a>
 </div>
 
 <h2>Todo na dziś / najważniejsze</h2>

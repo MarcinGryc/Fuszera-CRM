@@ -75,18 +75,20 @@ def sold_coffee_weight(orders, products, month=None):
     return total_kg, month_kg
 
 
-def income_totals(month):
-    total_income = (
-        Finance.query.with_entities(func.coalesce(func.sum(Finance.amount), 0))
-        .filter(Finance.type == "income")
-        .scalar()
-    )
-    month_income = (
-        Finance.query.with_entities(func.coalesce(func.sum(Finance.amount), 0))
-        .filter(
-            Finance.type == "income",
-            func.substr(Finance.date, 1, 7) == month,
-        )
-        .scalar()
-    )
-    return total_income, month_income
+def finance_totals(month):
+    totals = {}
+    for period, date_filter in (
+        ("total", None),
+        ("month", func.substr(Finance.date, 1, 7) == month),
+    ):
+        for transaction_type in ("income", "expense"):
+            query = Finance.query.with_entities(
+                func.coalesce(func.sum(Finance.amount), 0)
+            ).filter(Finance.type == transaction_type)
+            if date_filter is not None:
+                query = query.filter(date_filter)
+            totals[f"{period}_{transaction_type}"] = query.scalar()
+
+    totals["total_balance"] = totals["total_income"] - totals["total_expense"]
+    totals["month_balance"] = totals["month_income"] - totals["month_expense"]
+    return totals

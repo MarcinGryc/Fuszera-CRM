@@ -1,10 +1,9 @@
 from flask import Blueprint, render_template
-from sqlalchemy import func
 
 from extensions import db
-from models import Client, Finance, InventoryItem, Order, Product, Todo
+from models import Client, InventoryItem, Order, Product, Todo
 from routes.auth import login_required
-from routes.order_metrics import current_month, income_totals, sold_coffee_weight
+from routes.order_metrics import current_month, finance_totals, sold_coffee_weight
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -13,15 +12,7 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @login_required
 def index():
     month = current_month()
-    income, month_income = income_totals(month)
-
-    expense = (
-        db.session.query(func.coalesce(func.sum(Finance.amount), 0))
-        .filter(Finance.type == "expense")
-        .scalar()
-    )
-
-    balance = income - expense
+    totals = finance_totals(month)
 
     individual_count = Client.query.filter_by(type="individual").count()
     b2b_count = Client.query.filter_by(type="b2b").count()
@@ -45,12 +36,9 @@ def index():
 
     return render_template(
         "index.html",
-        income=income,
-        month_income=month_income,
+        **totals,
         total_kg=total_kg,
         month_kg=month_kg,
-        expense=expense,
-        balance=balance,
         individual_count=individual_count,
         b2b_count=b2b_count,
         products_count=products_count,

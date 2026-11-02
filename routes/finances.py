@@ -1,14 +1,13 @@
 from datetime import datetime
 
 from flask import Blueprint, redirect, render_template, request, url_for
-from sqlalchemy import func
 
 from extensions import db
 from models import Finance
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
 from routes.import_utils import read_xlsx_rows
-from routes.order_metrics import current_month, income_totals
+from routes.order_metrics import current_month, finance_totals
 
 finances_bp = Blueprint("finances", __name__)
 
@@ -29,17 +28,12 @@ def finances():
 
     items = Finance.query.order_by(Finance.date.desc(), Finance.id.desc()).all()
 
-    income, month_income = income_totals(current_month())
-    expense = db.session.query(func.coalesce(func.sum(Finance.amount), 0)).filter(Finance.type == "expense").scalar()
-    balance = income - expense
+    totals = finance_totals(current_month())
 
     return render_template(
         "finances.html",
         items=items,
-        income=income,
-        month_income=month_income,
-        expense=expense,
-        balance=balance,
+        **totals,
     )
 
 
