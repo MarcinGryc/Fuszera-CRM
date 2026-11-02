@@ -27,3 +27,4 @@ class Config:
 
     ADMIN_LOGIN = os.environ.get("ADMIN_LOGIN", "ziomeczki@fuszera.pl")
     ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Fuszera_2023@")
+    SHOP_WEBHOOK_SECRET = os.environ.get("SHOP_WEBHOOK_SECRET", "")

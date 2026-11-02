@@ -68,6 +68,7 @@
 <table>
     <tr>
         <th>Data</th>
+        <th>Źródło / płatność</th>
         <th>Klient</th>
         <th>Produkty</th>
         <th>Wartość</th>
@@ -78,18 +79,40 @@
     {% for order in orders %}
     <tr>
         <td>{{ order.order_date }}</td>
+        <td>
+            {{ "Sklep" if order.source == "shop" else "Ręczne" }}<br>
+            {% if order.payment_status == "paid" %}
+                Opłacone
+            {% elif order.payment_status == "pending" %}
+                Oczekuje na płatność
+            {% elif order.payment_status == "failed" %}
+                Płatność nieudana
+            {% elif order.payment_status == "preview" %}
+                Podgląd
+            {% else %}
+                —
+            {% endif %}
+        </td>
         <td>{{ order.client.company if order.client and order.client.company else (order.client.name if order.client else "Brak") }}</td>
         <td>
+            {% if order.items %}
             {% for item in order.items %}
                 {{ item.product_name }} × {{ item.quantity }} = {{ "%.2f"|format(item.line_total) }} zł<br>
             {% endfor %}
+            {% elif order.product_name %}
+                {{ order.product_name }} × {{ order.quantity or 1 }}
+            {% endif %}
         </td>
         <td>{{ "%.2f"|format(order.total) }} zł</td>
         <td>{{ order.notes }}</td>
         <td>
+            {% if order.source == "manual" %}
             <form method="post" action="/orders/delete/{{ order.id }}">
                 <button class="delete" type="submit">Usuń</button>
             </form>
+            {% else %}
+                Zachowano zintegrowane zamówienie
+            {% endif %}
         </td>
     </tr>
     {% endfor %}

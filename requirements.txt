@@ -2,6 +2,7 @@ Flask
 gunicorn
 Flask-SQLAlchemy
 Flask-Migrate
+psycopg[binary]
 psycopg2-binary
 python-dotenv
 openpyxl

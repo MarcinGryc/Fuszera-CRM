@@ -28,12 +28,20 @@ class Product(db.Model):
 
 class Order(db.Model):
     __tablename__ = "orders"
+    __table_args__ = (
+        db.Index("uq_orders_source_external_id", "source", "external_id", unique=True),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"))
+    product_name = db.Column(db.String(255))
+    quantity = db.Column(db.Integer)
     total = db.Column(db.Float, nullable=False, default=0)
     order_date = db.Column(db.String(20), nullable=False)
     notes = db.Column(db.Text)
+    source = db.Column(db.String(30), nullable=False, default="manual")
+    external_id = db.Column(db.String(100))
+    payment_status = db.Column(db.String(30), nullable=False, default="manual")
 
     items = db.relationship("OrderItem", backref="order", lazy=True, cascade="all, delete-orphan")
 
@@ -59,12 +67,16 @@ class Todo(db.Model):
 
 class Finance(db.Model):
     __tablename__ = "finances"
+    __table_args__ = (
+        db.Index("uq_finances_source_ref", "source_ref", unique=True),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(30), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.String(20), nullable=False)
+    source_ref = db.Column(db.String(140))
 
 
 class InventoryItem(db.Model):

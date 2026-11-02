@@ -3,6 +3,12 @@
 {% block content %}
 <h1>Wyceń kawę</h1>
 
+{% if error %}
+<div class="card">
+    <p class="expense"><strong>Błąd:</strong> {{ error }}</p>
+</div>
+{% endif %}
+
 <div class="card">
     <form method="post">
         <label>Typ kawy</label>
@@ -58,6 +64,7 @@
         <p>Koszt netto: {{ result.b2c_250.cost_net }} zł</p>
         <p>Netto: <strong>{{ result.b2c_250.net }} zł</strong></p>
         <p>Brutto: <strong>{{ result.b2c_250.gross }} zł</strong></p>
+        <p>Marża: {{ result.b2c_250.margin_pct }}%</p>
     </div>
 
     <div class="card">
@@ -65,6 +72,7 @@
         <p>Koszt netto: {{ result.b2c_1000.cost_net }} zł</p>
         <p>Netto: <strong>{{ result.b2c_1000.net }} zł</strong></p>
         <p>Brutto: <strong>{{ result.b2c_1000.gross }} zł</strong></p>
+        <p>Marża: {{ result.b2c_1000.margin_pct }}%</p>
     </div>
 
     <div class="card">
@@ -72,6 +80,7 @@
         <p>Koszt netto: {{ result.b2b_250.cost_net }} zł</p>
         <p>Netto po rabacie: <strong>{{ result.b2b_250.net }} zł</strong></p>
         <p>Brutto po rabacie: <strong>{{ result.b2b_250.gross }} zł</strong></p>
+        <p>Marża po rabacie: {{ result.b2b_250.margin_pct }}%</p>
     </div>
 
     <div class="card">
@@ -79,6 +88,7 @@
         <p>Koszt netto: {{ result.b2b_1000.cost_net }} zł</p>
         <p>Netto po rabacie: <strong>{{ result.b2b_1000.net }} zł</strong></p>
         <p>Brutto po rabacie: <strong>{{ result.b2b_1000.gross }} zł</strong></p>
+        <p>Marża po rabacie: {{ result.b2b_1000.margin_pct }}%</p>
     </div>
 </div>
 {% endif %}
