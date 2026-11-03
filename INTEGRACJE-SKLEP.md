@@ -33,10 +33,24 @@ zweryfikuj synchronizację w środowisku testowym.
 
 ## Wysyłka ofert na Renderze
 
-Usługa CRM jest na planie Render Free; ten plan może blokować bezpośrednie
-połączenia SMTP. Kod zachowuje SMTP dla hostów, które je obsługują, i dodaje
-wysyłkę przez Resend API po HTTPS. W Renderze CRM ustaw `EMAIL_PROVIDER=resend`,
-`RESEND_API_KEY` oraz zweryfikowany adres nadawcy `SMTP_FROM`. Przycisk testu
+Wysyłka jest domyślnie wyłączona (`OFFERS_ENABLED=false`). Strona „Wyślij ofertę”
+pokazuje „Work in progress”; również bezpośrednie żądania wysyłki i testowania
+połączenia są zablokowane. Nie jest teraz wymagane konfigurowanie dostawcy poczty.
+
+Listy dystrybucyjne łączą ręczne wpisy z aktualnymi adresami klientów, oddzielnie
+dla B2B i klientów indywidualnych. Adresy są normalizowane i deduplikowane w obrębie
+listy; puste i nieprawidłowe adresy są pomijane. Zmiany w kartotece klienta są od
+razu widoczne na liście i w eksporcie, także dla klientów utworzonych przez sklep.
+
+Po przejściu na hosting obsługujący SMTP ustaw `EMAIL_PROVIDER=smtp`, `SMTP_HOST`,
+`SMTP_PORT` (587 dla `SMTP_SECURITY=starttls` lub 465 dla `SMTP_SECURITY=ssl`),
+`SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` oraz `OFFERS_ENABLED=true` i wdróż usługę.
+Kod wysyłki pozostaje gotowy do uruchomienia po tej konfiguracji.
+
+Opcjonalną alternatywą dla SMTP jest Resend API po HTTPS, także na Render Free,
+który blokuje standardowe porty SMTP. Dla tego wariantu ustaw `EMAIL_PROVIDER=resend`,
+`RESEND_API_KEY`, zweryfikowany adres nadawcy `SMTP_FROM` oraz `OFFERS_ENABLED=true`.
+Przycisk testu
 sprawdza autoryzację API bez wysyłania wiadomości. Wysyłka ofert z listą BCC
 dzieli adresatów na bezpieczne partie, a tryb osobnych maili wysyła wiadomości
 oddzielnie. Nie testuj wysyłki do prawdziwej listy bez świadomego zatwierdzenia.

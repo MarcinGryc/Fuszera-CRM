@@ -2,6 +2,8 @@ import os
 
 
 class Config:
+    OFFERS_ENABLED = os.environ.get("OFFERS_ENABLED", "false").lower() in {"true", "1", "yes"}
+
     SECRET_KEY = os.environ.get(
         "SECRET_KEY",
         "lokalny-sekret-do-testow"

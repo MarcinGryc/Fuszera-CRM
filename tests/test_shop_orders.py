@@ -4,7 +4,10 @@ import json
 import os
 import time
 import unittest
+from io import BytesIO
 from unittest.mock import MagicMock, patch
+
+from openpyxl import Workbook, load_workbook
 
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SECRET_KEY"] = "isolated-test-key"
@@ -13,8 +16,9 @@ os.environ["SHOP_WEBHOOK_SECRET"] = "test-webhook-secret-" * 2
 import app as app_module
 from app import create_app, ensure_additive_schema
 from extensions import db
-from models import Client, Finance, Order, OrderItem, Product, Supplier
+from models import Client, DistributionContact, Finance, Order, OrderItem, Product, Supplier
 from routes.coffee import calculate_price
+from routes.distribution_contacts import distribution_lists
 from routes.order_metrics import current_month, sold_coffee_weight
 from routes.offers import send_offer_email, test_email_connection as check_email_connection
 
@@ -80,7 +84,7 @@ def shop_event(event_id, status, paid_at=None):
 class ShopOrderSyncTests(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
-        self.app.config.update(TESTING=True, SHOP_WEBHOOK_SECRET=SECRET)
+        self.app.config.update(TESTING=True, SHOP_WEBHOOK_SECRET=SECRET, OFFERS_ENABLED=False)
         with self.app.app_context():
             db.drop_all()
             db.create_all()
@@ -116,6 +120,8 @@ class ShopOrderSyncTests(unittest.TestCase):
             self.assertEqual(order.order_date, "2026-11-02")
             self.assertEqual(OrderItem.query.filter_by(order_id=order.id).count(), 1)
             self.assertEqual(Finance.query.count(), 0)
+            self.assertEqual([contact["email"] for contact in distribution_lists()["individual"]],
+                             ["jan@example.test"])
 
     def test_shop_replay_preserves_existing_finance_entry(self):
         with self.app.app_context():
@@ -433,6 +439,159 @@ class ShopOrderSyncTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("muszą sumować się do 100%", response.get_data(as_text=True))
+
+    def test_distribution_combines_clients_and_manual_contacts_without_duplicates(self):
+        with self.app.app_context():
+            db.session.add_all([
+                Client(type="b2b", name="Firma", email=" Firma@Example.test "),
+                Client(type="b2b", name="Duplikat", email="firma@example.test"),
+                Client(type="individual", name="Osoba", email="firma@example.test"),
+                Client(type="individual", name="Pusty", email=""),
+                Client(type="individual", name="Błędny", email="brak-adresu"),
+                Client(type="individual", name="Wiele adresów", email="a@test.pl\nb@test.pl"),
+                DistributionContact(list_type="b2b", email="FIRMA@example.test"),
+                DistributionContact(list_type="b2b", email="firma@example.test"),
+                DistributionContact(list_type="individual", email="reczny@example.test"),
+            ])
+            db.session.commit()
+            lists = distribution_lists()
+            self.assertEqual([item["email"] for item in lists["b2b"]], ["firma@example.test"])
+            self.assertEqual([item["email"] for item in lists["individual"]],
+                             ["firma@example.test", "reczny@example.test"])
+
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        page = self.client.get("/distribution")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Z kartoteki klienta", page.get_data(as_text=True))
+        response = self.client.get("/distribution/export")
+        self.assertEqual(response.status_code, 200)
+        workbook = load_workbook(BytesIO(response.data))
+        rows = list(workbook.active.iter_rows(min_row=2, values_only=True))
+        self.assertEqual([(row[1], row[2]) for row in rows], [
+            ("B2B", "firma@example.test"),
+            ("Indywidualni", "firma@example.test"),
+            ("Indywidualni", "reczny@example.test"),
+        ])
+        workbook.close()
+
+    def test_distribution_tracks_client_creation_edit_import_and_deletion(self):
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        response = self.client.post("/clients", data={
+            "type": "individual", "name": "Klient", "email": "old@example.test",
+        })
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            client_id = Client.query.one().id
+            self.assertEqual(distribution_lists()["individual"][0]["email"], "old@example.test")
+        response = self.client.post(f"/clients/edit/{client_id}", data={
+            "type": "b2b", "name": "Klient", "email": "new@example.test",
+        })
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            lists = distribution_lists()
+            self.assertEqual(lists["individual"], [])
+            self.assertEqual([item["email"] for item in lists["b2b"]], ["new@example.test"])
+        response = self.client.post(f"/clients/delete/{client_id}")
+        self.assertEqual(response.status_code, 302)
+
+        workbook = Workbook()
+        workbook.active.append(["Typ", "Nazwa", "Email"])
+        workbook.active.append(["B2B", "Import", "import@example.test"])
+        upload = BytesIO()
+        workbook.save(upload)
+        workbook.close()
+        upload.seek(0)
+        response = self.client.post("/clients/import", data={"file": (upload, "clients.xlsx")})
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            lists = distribution_lists()
+            self.assertEqual(lists["individual"], [])
+            self.assertEqual([item["email"] for item in lists["b2b"]], ["import@example.test"])
+
+    def test_distribution_manual_add_import_and_delete_deduplicate_addresses(self):
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        for email in (" Test@Example.test ", "test@example.test"):
+            response = self.client.post("/distribution", data={"list_type": "b2b", "email": email})
+            self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.post("/distribution", data={
+            "list_type": "b2b", "email": "invalid",
+        }).status_code, 400)
+        workbook = Workbook()
+        workbook.active.append(["Lista", "Email"])
+        workbook.active.append(["B2B", "TEST@example.test"])
+        workbook.active.append(["B2B", "other@example.test"])
+        workbook.active.append(["B2B", "other@example.test"])
+        workbook.active.append(["B2B", "invalid"])
+        upload = BytesIO()
+        workbook.save(upload)
+        workbook.close()
+        upload.seek(0)
+        self.assertEqual(self.client.post("/distribution/import", data={
+            "file": (upload, "contacts.xlsx"),
+        }).status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(DistributionContact.query.count(), 2)
+            contact_id = DistributionContact.query.filter_by(email="test@example.test").one().id
+            db.session.add(DistributionContact(list_type="b2b", email=" TEST@example.test "))
+            db.session.commit()
+        self.assertEqual(self.client.post(f"/distribution/delete/{contact_id}").status_code, 302)
+        with self.app.app_context():
+            self.assertEqual([item["email"] for item in distribution_lists()["b2b"]],
+                             ["other@example.test"])
+
+    def test_offers_work_in_progress_blocks_sending_and_connection_tests(self):
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        page = self.client.get("/offers")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Work in progress", page.get_data(as_text=True))
+        self.assertNotIn('name="subject"', page.get_data(as_text=True))
+        with patch("routes.offers.send_offer_email") as send, patch("routes.offers.test_email_connection") as check:
+            for action in ("send_offer", "test_smtp"):
+                response = self.client.post("/offers", data={"action": action})
+                self.assertEqual(response.status_code, 409)
+                self.assertIn("Work in progress", response.get_data(as_text=True))
+            send.assert_not_called()
+            check.assert_not_called()
+
+    def test_offers_can_be_enabled_later_and_use_the_combined_distribution_list(self):
+        self.app.config["OFFERS_ENABLED"] = True
+        with self.app.app_context():
+            db.session.add_all([
+                Client(type="b2b", name="Klient", email="client@example.test"),
+                DistributionContact(list_type="b2b", email="CLIENT@example.test"),
+                DistributionContact(list_type="b2b", email="manual@example.test"),
+            ])
+            db.session.commit()
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        page = self.client.get("/offers").get_data(as_text=True)
+        self.assertIn("Klienci B2B (2)", page)
+        self.assertNotIn("Work in progress", page)
+        with patch("routes.offers.send_offer_email") as send:
+            response = self.client.post("/offers", data={
+                "action": "send_offer", "list_type": "b2b", "subject": "Oferta",
+                "body": "Treść", "mode": "bcc",
+            })
+            self.assertEqual(response.status_code, 200)
+            send.assert_called_once_with("Oferta", "Treść",
+                                         ["client@example.test", "manual@example.test"], "bcc")
+
+    def test_smtp_offer_remains_ready_for_future_configuration(self):
+        with patch.dict(os.environ, {
+            "EMAIL_PROVIDER": "smtp", "SMTP_HOST": "smtp.example.test", "SMTP_PORT": "587",
+            "SMTP_SECURITY": "starttls", "SMTP_USER": "test-user", "SMTP_PASSWORD": "test-password",
+            "SMTP_FROM": "offers@example.test",
+        }), patch("routes.offers.smtplib.SMTP") as smtp:
+            send_offer_email("Oferta", "Treść", ["client@example.test"], "bcc")
+            smtp.assert_called_once_with("smtp.example.test", 587, timeout=60)
+            smtp.return_value.starttls.assert_called_once()
+            smtp.return_value.login.assert_called_once_with("test-user", "test-password")
+            message = smtp.return_value.__enter__.return_value.send_message.call_args.args[0]
+            self.assertEqual(message["Bcc"], "client@example.test")
 
     def test_resend_offer_uses_bcc_without_exposing_recipients(self):
         response = MagicMock()

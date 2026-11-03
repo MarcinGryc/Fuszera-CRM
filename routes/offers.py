@@ -5,12 +5,11 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from email.message import EmailMessage
 
-from flask import Blueprint, render_template, request
-from sqlalchemy import select
+from flask import Blueprint, current_app, render_template, request
 
 from extensions import db
-from models import DistributionContact
 from routes.auth import login_required
+from routes.distribution_contacts import distribution_lists
 
 offers_bp = Blueprint("offers", __name__)
 
@@ -171,6 +170,11 @@ def send_offer_email(subject, body, recipients, mode):
 @offers_bp.route("/offers", methods=["GET", "POST"])
 @login_required
 def offers():
+    if not current_app.config.get("OFFERS_ENABLED", False):
+        return render_template("offers.html", offers_enabled=False), (
+            409 if request.method == "POST" else 200
+        )
+
     message = None
     error = None
 
@@ -188,13 +192,7 @@ def offers():
                 body = request.form.get("body")
                 mode = request.form.get("mode")
 
-                recipients = db.session.execute(
-                    select(DistributionContact.email).where(
-                        DistributionContact.list_type == list_type
-                    )
-                ).scalars().all()
-
-                recipients = sorted({email.strip() for email in recipients if email and "@" in email})
+                recipients = [contact["email"] for contact in distribution_lists().get(list_type, [])]
 
                 if not recipients:
                     raise RuntimeError("Wybrana lista jest pusta.")
@@ -207,22 +205,13 @@ def offers():
         except Exception as e:
             error = str(e)
 
-    individual_count = db.session.execute(
-        select(db.func.count()).select_from(DistributionContact).where(
-            DistributionContact.list_type == "individual"
-        )
-    ).scalar()
-
-    b2b_count = db.session.execute(
-        select(db.func.count()).select_from(DistributionContact).where(
-            DistributionContact.list_type == "b2b"
-        )
-    ).scalar()
+    lists = distribution_lists()
 
     return render_template(
         "offers.html",
+        offers_enabled=True,
         message=message,
         error=error,
-        individual_count=individual_count,
-        b2b_count=b2b_count,
+        individual_count=len(lists["individual"]),
+        b2b_count=len(lists["b2b"]),
     )

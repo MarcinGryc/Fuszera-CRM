@@ -2,6 +2,8 @@
 
 {% block content %}
 <h1>Listy dystrybucyjne</h1>
+<p class="muted">Adresy e-mail klientów trafiają na odpowiednią listę automatycznie, bez duplikatów.
+Adres lub typ klienta możesz zmienić w jego kartotece. Możesz też dodawać adresy ręcznie i importować je z Excela.</p>
 
 <details>
     <summary>Dodaj maila do listy</summary>
@@ -29,9 +31,14 @@
     <div class="card">
         <h3>{{ contact.email }}</h3>
 
+        {% if contact.client_id %}
+        <p class="muted">Z kartoteki klienta</p>
+        <a class="btn" href="{{ url_for('clients.clients', q=contact.email) }}">Edytuj klienta</a>
+        {% else %}
         <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
             <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
         </form>
+        {% endif %}
     </div>
     {% else %}
     <p class="muted">Brak maili B2B.</p>
@@ -45,9 +52,14 @@
     <div class="card">
         <h3>{{ contact.email }}</h3>
 
+        {% if contact.client_id %}
+        <p class="muted">Z kartoteki klienta</p>
+        <a class="btn" href="{{ url_for('clients.clients', q=contact.email) }}">Edytuj klienta</a>
+        {% else %}
         <form method="post" action="/distribution/delete/{{ contact.id }}" class="inline">
             <button class="delete" type="submit" onclick="return confirm('Usunąć maila z listy?')">Usuń</button>
         </form>
+        {% endif %}
     </div>
     {% else %}
     <p class="muted">Brak maili indywidualnych.</p>

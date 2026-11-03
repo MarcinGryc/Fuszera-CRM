@@ -3,6 +3,14 @@
 {% block content %}
 <h1>Wyślij ofertę</h1>
 
+{% if not offers_enabled %}
+<div class="card">
+    <h2>Work in progress</h2>
+    <p>Wysyłka ofert będzie dostępna w późniejszym terminie.</p>
+    <a class="btn" href="{{ url_for('distribution.distribution') }}">Przejdź do list dystrybucyjnych</a>
+</div>
+{% else %}
+
 {% if message %}
 <div class="card">
     <p class="income"><strong>{{ message }}</strong></p>
@@ -65,4 +73,5 @@
 
 </div>
 
+{% endif %}
 {% endblock %}
