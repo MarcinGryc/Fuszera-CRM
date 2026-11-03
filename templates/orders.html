@@ -6,11 +6,11 @@
 <div class="grid">
     <div class="card">
         <h3>Sprzedana kawa — łącznie</h3>
-        <div class="stat">{{ "%.3f"|format(total_kg) }} kg</div>
+        <div class="stat">{{ ("%.3f"|format(total_kg)).rstrip("0").rstrip(".")|replace(".", ",") }} kg</div>
     </div>
     <div class="card">
         <h3>Sprzedana kawa — w tym miesiącu</h3>
-        <div class="stat">{{ "%.3f"|format(month_kg) }} kg</div>
+        <div class="stat">{{ ("%.3f"|format(month_kg)).rstrip("0").rstrip(".")|replace(".", ",") }} kg</div>
     </div>
 </div>
 <p class="muted">Uwzględniane są zamówienia ręczne i opłacone zamówienia ze sklepu; gramatura musi być podana przy produkcie lub w jego nazwie.</p>

@@ -73,7 +73,7 @@
     <a class="card-link" href="/orders">
         <div class="card">
             <h3>Sprzedana kawa — łącznie</h3>
-            <div class="stat">{{ "%.3f"|format(total_kg) }} kg</div>
+            <div class="stat">{{ ("%.3f"|format(total_kg)).rstrip("0").rstrip(".")|replace(".", ",") }} kg</div>
         </div>
     </a>
 

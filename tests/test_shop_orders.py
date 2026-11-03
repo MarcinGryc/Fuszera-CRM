@@ -289,7 +289,7 @@ class ShopOrderSyncTests(unittest.TestCase):
         response = self.client.get("/orders")
         page = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("1.500 kg", page)
+        self.assertIn("1,5 kg", page)
         self.assertNotIn("UNPAID-ORDER", page)
 
         finance_response = self.client.get(f"/finances?month={month}")
@@ -305,7 +305,7 @@ class ShopOrderSyncTests(unittest.TestCase):
         dashboard_response = self.client.get(f"/?month={month}")
         dashboard_page = dashboard_response.get_data(as_text=True)
         self.assertEqual(dashboard_response.status_code, 200)
-        self.assertIn("1.500 kg", dashboard_page)
+        self.assertIn("1,5 kg", dashboard_page)
         self.assertIn("139.00 zł", dashboard_page)
         self.assertNotIn("W tym miesiącu", dashboard_page)
         self.assertNotIn('name="month"', dashboard_page)
