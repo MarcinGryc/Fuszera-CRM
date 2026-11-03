@@ -10,7 +10,7 @@ from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import func
 
 from extensions import db
-from models import Client, Finance, Order, OrderItem
+from models import Client, Order, OrderItem
 
 shop_webhook_bp = Blueprint("shop_webhook", __name__)
 
@@ -284,25 +284,6 @@ def receive_shop_order():
         crm_order.payment_status = data["status"]
         if crm_order.payment_status == "paid":
             crm_order.order_date = data["paid_date"]
-
-    if crm_order.payment_status == "paid":
-        finance_ref = f"shop:{data['external_id']}"
-        if Finance.query.filter_by(source_ref=finance_ref).first() is None:
-            db.session.add(
-                Finance(
-                    type="income",
-                    title=(
-                        f"Zamówienie sklepowe {data['order_number']}: "
-                        + ", ".join(
-                            f"{name} × {quantity}"
-                            for name, _, quantity, _ in data["items"]
-                        )
-                    )[:255],
-                    amount=crm_order.total,
-                    date=data["paid_date"],
-                    source_ref=finance_ref,
-                )
-            )
 
     db.session.commit()
     return jsonify(status="received", eventId=data["event_id"]), 200

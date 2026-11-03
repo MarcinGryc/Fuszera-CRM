@@ -4,7 +4,7 @@ from math import isfinite
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from extensions import db
-from models import Client, Finance, Order, OrderItem, Product
+from models import Client, Order, OrderItem, Product
 from routes.auth import login_required
 from routes.export_utils import export_xlsx
 from routes.order_metrics import current_month, sold_coffee_weight
@@ -99,19 +99,6 @@ def orders():
                 )
             )
 
-        db.session.add(
-            Finance(
-                type="income",
-                title=(
-                    f"Zamówienie ręczne #{order.id}: "
-                    + ", ".join(
-                        f"{name} × {quantity}" for name, _, quantity, _ in parsed_items
-                    )
-                )[:255],
-                amount=order.total,
-                date=order.order_date,
-            )
-        )
         db.session.commit()
         return redirect(url_for("orders.orders"))
 

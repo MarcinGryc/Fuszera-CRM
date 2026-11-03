@@ -15,7 +15,7 @@ from app import create_app, ensure_additive_schema
 from extensions import db
 from models import Client, Finance, Order, OrderItem, Product, Supplier
 from routes.coffee import calculate_price
-from routes.order_metrics import current_month
+from routes.order_metrics import current_month, sold_coffee_weight
 from routes.offers import send_offer_email, test_email_connection as check_email_connection
 
 
@@ -95,7 +95,7 @@ class ShopOrderSyncTests(unittest.TestCase):
             headers=headers or signed_headers(body),
         )
 
-    def test_paid_shop_order_is_recorded_once_in_finances(self):
+    def test_paid_shop_order_is_recorded_once_without_finance_entry(self):
         created = self.post_event(shop_event("created-event", "pending"))
         self.assertEqual(created.status_code, 200)
 
@@ -115,14 +115,27 @@ class ShopOrderSyncTests(unittest.TestCase):
             self.assertEqual(order.payment_status, "paid")
             self.assertEqual(order.order_date, "2026-11-02")
             self.assertEqual(OrderItem.query.filter_by(order_id=order.id).count(), 1)
+            self.assertEqual(Finance.query.count(), 0)
+
+    def test_shop_replay_preserves_existing_finance_entry(self):
+        with self.app.app_context():
+            db.session.add(Finance(
+                type="income", title="Istniejący wpis", amount=50,
+                date="2020-01-01", source_ref="shop:" + "a" * 32,
+            ))
+            db.session.commit()
+
+        paid_event = shop_event("paid-event", "paid", "2026-11-02T11:00:00.000Z")
+        self.assertEqual(self.post_event(paid_event).status_code, 200)
+        self.assertEqual(self.post_event(paid_event).status_code, 200)
+
+        with self.app.app_context():
             self.assertEqual(Finance.query.count(), 1)
             finance = Finance.query.one()
-            self.assertEqual(finance.amount, 95.83)
-            self.assertEqual(finance.date, "2026-11-02")
-            self.assertEqual(
-                finance.title, "Zamówienie sklepowe F-000123: Kawa 250 g × 2"
-            )
-            self.assertNotIn("Jan Kowalski", finance.title)
+            self.assertEqual((finance.title, finance.amount, finance.date),
+                             ("Istniejący wpis", 50, "2020-01-01"))
+            self.assertEqual(sold_coffee_weight(Order.query.all(), [], "2026-11"),
+                             (0.5, 0.5))
 
     def test_invalid_signature_does_not_create_order(self):
         event = shop_event("created-event", "pending")
@@ -138,7 +151,7 @@ class ShopOrderSyncTests(unittest.TestCase):
         with self.app.app_context():
             self.assertEqual(Order.query.count(), 0)
 
-    def test_manual_order_creates_income_entry(self):
+    def test_manual_order_does_not_create_finance_entry(self):
         with self.client.session_transaction() as session:
             session["logged_in"] = True
         response = self.client.post(
@@ -155,10 +168,10 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         with self.app.app_context():
             self.assertEqual(Order.query.filter_by(source="manual").count(), 1)
-            self.assertEqual(Finance.query.count(), 1)
-            finance = Finance.query.one()
-            self.assertEqual(finance.amount, 20.0)
-            self.assertEqual(finance.title, "Zamówienie ręczne #1: Kawa 250 g × 2")
+            order = Order.query.one()
+            self.assertEqual(order.total, 20.0)
+            self.assertEqual(OrderItem.query.filter_by(order_id=order.id).count(), 1)
+            self.assertEqual(Finance.query.count(), 0)
 
         with self.client.session_transaction() as session:
             session["logged_in"] = True
@@ -166,6 +179,25 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("<th>Tytuł</th>", orders_page)
         self.assertIn("Zamówienie #1:", orders_page)
         self.assertNotIn("<th>Klient</th>", orders_page)
+
+    def test_finance_entries_can_be_added_and_deleted_without_orders(self):
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        response = self.client.post("/finances", data={
+            "type": "income", "title": "Wpłata ręczna", "amount": "123.45",
+            "date": "2026-11-02",
+        })
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            finance = Finance.query.one()
+            self.assertEqual(finance.amount, 123.45)
+            self.assertEqual(Order.query.count(), 0)
+            finance_id = finance.id
+        response = self.client.post(f"/finances/delete/{finance_id}")
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(Finance.query.count(), 0)
+            self.assertEqual(Order.query.count(), 0)
 
     def test_manual_order_rejects_non_finite_price_without_finance_entry(self):
         with self.client.session_transaction() as session:

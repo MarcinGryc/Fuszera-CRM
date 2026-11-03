@@ -17,11 +17,13 @@ Nieopłacone rekordy, które trafiły do CRM przed tą zmianą, pozostają w baz
 ale są ukryte w listach i eksporcie; nie są kasowane. Po opłaceniu zamówienie
 zostanie pokazane po odebraniu aktualizacji statusu.
 
-Przychód jest księgowany wyłącznie dla statusu `paid` i zawiera kwotę całkowitą
-sklepu wraz z dostawą. Ponowienia nie tworzą kolejnego zamówienia ani wpisu
-finansowego. Zamówienia sklepowe są chronione przed usunięciem z widoku CRM.
+Finanse są prowadzone niezależnie od zamówień. Dodanie zamówienia ręcznego ani
+odebranie opłaconego zamówienia ze sklepu nie tworzy wpisu finansowego.
+Przychody i wydatki dodaje się w module Finanse lub przez import finansów.
+Istniejące wpisy finansowe pozostają bez zmian. Ponowienia webhooków nie tworzą
+kolejnego zamówienia. Zamówienia sklepowe są chronione przed usunięciem z widoku CRM.
 Podsumowania sprzedaży kawy liczą zamówienia ręczne i opłacone zamówienia
-sklepowe; gramatura jest odczytywana z produktu lub nazwy pozycji.
+sklepowe według daty zamówienia; gramatura jest odczytywana z produktu lub nazwy pozycji.
 
 Przy uruchomieniu CRM wykonuje wyłącznie idempotentne, addytywne zmiany schematu:
 dodaje brakujące kolumny oraz unikalne indeksy. Nie usuwa tabel, kolumn ani

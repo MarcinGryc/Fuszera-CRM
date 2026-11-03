@@ -43,14 +43,6 @@ def sold_coffee_weight(orders, products, month=None):
         for product in products
         if product.name
     }
-    shop_paid_dates = {
-        item.source_ref.removeprefix("shop:"): item.date
-        for item in Finance.query.filter(
-            Finance.type == "income",
-            Finance.source_ref.isnot(None),
-            Finance.source_ref.like("shop:%"),
-        ).all()
-    }
     total_kg = 0
     month_kg = 0
 
@@ -58,11 +50,6 @@ def sold_coffee_weight(orders, products, month=None):
         if order.source == "shop" and order.payment_status != "paid":
             continue
 
-        paid_date = (
-            shop_paid_dates.get(order.external_id, order.order_date)
-            if order.source == "shop"
-            else order.order_date
-        )
         order_kg = 0
         if order.items:
             for item in order.items:
@@ -79,7 +66,7 @@ def sold_coffee_weight(orders, products, month=None):
             order_kg = weight * (order.quantity or 1)
 
         total_kg += order_kg
-        if month and paid_date.startswith(month):
+        if month and order.order_date.startswith(month):
             month_kg += order_kg
 
     return total_kg, month_kg
