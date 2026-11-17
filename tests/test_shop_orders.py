@@ -17,7 +17,7 @@ import app as app_module
 from app import create_app, ensure_additive_schema
 from extensions import db
 from models import Client, DistributionContact, Finance, Order, OrderItem, Product, Supplier
-from routes.coffee import calculate_price
+from routes.coffee import DEFAULTS, calculate_price
 from routes.distribution_contacts import distribution_lists
 from routes.order_metrics import current_month, sold_coffee_weight
 from routes.offers import send_offer_email, test_email_connection as check_email_connection
@@ -431,10 +431,9 @@ class ShopOrderSyncTests(unittest.TestCase):
         response = self.client.post(
             "/coffee-pricing",
             data={
-                "coffee_type": "blend",
-                "labor": "0",
-                "blend_price": ["40", "30", ""],
-                "blend_percentage": ["50", "40", ""],
+                **DEFAULTS,
+                "blend_price": ["40", "30", "40"],
+                "blend_percentage": ["50", "40", "0"],
             },
         )
         self.assertEqual(response.status_code, 200)

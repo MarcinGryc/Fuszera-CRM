@@ -1,103 +1,124 @@
 {% extends "base.html" %}
-
+{% macro field(name, label, step='0.01', minimum='0', maximum=none) %}
+<div><label for="{{ name }}">{{ label }}</label>
+<input id="{{ name }}" name="{{ name }}" type="number" min="{{ minimum }}" {% if maximum %}max="{{ maximum }}"{% endif %} step="{{ step }}" value="{{ values[name] }}" required></div>
+{% endmacro %}
+{% macro result_value(key, metric) %}<span data-result="{{ key }}.{{ metric }}">{% if result %}{{ '%.2f'|format(result[key][metric]) if result[key][metric] is not none else '—' }}{% else %}—{% endif %}</span>{% endmacro %}
 {% block content %}
+<style>
+.pricing .intro {max-width: 820px; line-height: 1.55;}
+.pricing .coffee-grid,.pricing .result-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.pricing .coffee-grid .card {margin:0;}
+.pricing .controls {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;}
+.pricing .range-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.pricing .range-heading input {width:105px;margin:6px 0;}
+.pricing input[type=range] {padding:0;height:28px;border:0;accent-color:var(--pink);cursor:pointer;}
+.pricing .blend-total {padding:14px 0;font-weight:bold;}
+.pricing .price {font-size:28px;font-weight:bold;color:var(--pink);margin:8px 0;}
+.pricing .size {border-top:1px solid #50505d;margin-top:18px;padding-top:2px;}
+.pricing dl {display:grid;grid-template-columns:1fr auto;gap:10px;margin:12px 0;}
+.pricing dd {margin:0;text-align:right;}
+.pricing dt {color:var(--muted);}
+.pricing .notice {border-left:4px solid var(--pink);padding:12px 16px;background:var(--panel2);line-height:1.5;}
+.pricing #pricing-error {border-left-color:var(--danger);color:var(--danger);}
+.pricing .loss {border-color:var(--danger);}
+.pricing [hidden] {display:none !important;}
+.pricing .pending {opacity:.55;}
+.pricing .assumptions {font-size:14px;line-height:1.6;}
+@media(max-width:850px) {.pricing .coffee-grid,.pricing .result-grid,.pricing .controls{grid-template-columns:1fr;}main:has(.pricing){padding:16px;}body:has(.pricing) nav{position:static;}}
+</style>
+<div class="pricing">
 <h1>Wyceń kawę</h1>
-
-{% if error %}
-<div class="card">
-    <p class="expense"><strong>Błąd:</strong> {{ error }}</p>
+<p class="muted intro">Ułóż blend z maksymalnie trzech kaw. Ustaw 100% jednej kawy, aby wycenić single. Ceny ziarna i koszty wpisuj netto. Wyniki aktualizują się po zmianie wartości.</p>
+<form id="pricing-form" method="post">
+<div class="coffee-grid">
+{% for i in range(3) %}
+<section class="card">
+<h2>{% if i == 0 %}Brazylia{% else %}Kawa {{ i + 1 }}{% endif %}</h2>
+<div class="range-heading"><label for="price-{{ i }}">Zielone ziarno · zł/kg netto</label><input id="price-{{ i }}" name="blend_price" type="number" min="0" step="0.01" value="{{ values.blend_price[i] }}" required data-pair="price-range-{{ i }}"></div>
+<input id="price-range-{{ i }}" type="range" min="0" max="100" step="0.01" value="{{ values.blend_price[i] }}" aria-label="Cena kawy {{ i + 1 }} w złotych za kg" data-pair="price-{{ i }}">
+<div class="range-heading"><label for="share-{{ i }}">Udział w blendzie · %</label><input id="share-{{ i }}" name="blend_percentage" type="number" min="0" max="100" step="0.01" value="{{ values.blend_percentage[i] }}" required data-pair="share-range-{{ i }}"></div>
+<input id="share-range-{{ i }}" type="range" min="0" max="100" step="0.01" value="{{ values.blend_percentage[i] }}" aria-label="Udział kawy {{ i + 1 }} w procentach" data-pair="share-{{ i }}">
+</section>
+{% endfor %}
 </div>
-{% endif %}
-
-<div class="card">
-    <form method="post">
-        <label>Typ kawy</label>
-        <select name="coffee_type" id="coffee_type" onchange="toggleCoffeeType()">
-            <option value="single">Single</option>
-            <option value="blend">Blend</option>
-        </select>
-
-        <div id="single_box">
-            <label>Cena zielonego ziarna netto za 1 kg</label>
-            <input name="single_price" type="number" step="0.01" placeholder="np. 40">
-        </div>
-
-        <div id="blend_box" style="display:none;">
-            <h3>Skład blendu</h3>
-
-            <label>Ziarno 1 — cena netto / kg</label>
-            <input name="blend_price" type="number" step="0.01">
-
-            <label>Ziarno 1 — procent w blendzie</label>
-            <input name="blend_percentage" type="number" step="0.01">
-
-            <label>Ziarno 2 — cena netto / kg</label>
-            <input name="blend_price" type="number" step="0.01">
-
-            <label>Ziarno 2 — procent w blendzie</label>
-            <input name="blend_percentage" type="number" step="0.01">
-
-            <label>Ziarno 3 — cena netto / kg</label>
-            <input name="blend_price" type="number" step="0.01">
-
-            <label>Ziarno 3 — procent w blendzie</label>
-            <input name="blend_percentage" type="number" step="0.01">
-        </div>
-
-        <label>Koszt pracy na 1 kg wypalonej kawy</label>
-        <input name="labor" type="number" step="0.01" value="0">
-
-        <button type="submit">Wylicz cenę</button>
-    </form>
+<div id="blend-total" class="blend-total" role="status">Suma udziałów: — / 100%</div>
+<section class="card">
+<h2>Koszt paczki i palarni</h2>
+<div class="controls">
+{{ field('packaging', 'Opakowanie jednej paczki · zł netto') }}
+{{ field('production', 'Produkcja 1 kg wypalonej kawy · zł netto') }}
+{{ field('fixed_monthly', 'Koszty stałe palarni · zł netto / miesiąc') }}
+{{ field('monthly_kg', 'Sprzedana wypalona kawa · kg / miesiąc', minimum='0.01') }}
 </div>
-
-{% if result %}
-<h2>Wynik</h2>
-
-<div class="card">
-    <p><strong>Średnia cena zielonego ziarna netto:</strong> {{ result.green_price }} zł/kg</p>
+<p class="muted">Produkcja obejmuje pracę, gaz i energię. Koszty stałe dzielimy przez miesięczną sprzedaż. Koszt opakowania jest taki sam dla 250 g i 1 kg.</p>
+<details class="assumptions"><summary>Ubytek i dodatkowe koszty</summary>
+<div class="controls">
+{{ field('roast_loss', 'Ubytek masy podczas palenia · %', maximum='99.99') }}
+{{ field('extra_per_bag', 'Inne koszty jednej paczki · zł netto') }}
+{{ field('sales_fee', 'Prowizje od ceny sprzedaży netto · %', maximum='99.99') }}
 </div>
-
-<div class="grid">
-    <div class="card">
-        <h3>B2C 250 g</h3>
-        <p>Koszt netto: {{ result.b2c_250.cost_net }} zł</p>
-        <p>Netto: <strong>{{ result.b2c_250.net }} zł</strong></p>
-        <p>Brutto: <strong>{{ result.b2c_250.gross }} zł</strong></p>
-        <p>Marża: {{ result.b2c_250.margin_pct }}%</p>
-    </div>
-
-    <div class="card">
-        <h3>B2C 1 kg</h3>
-        <p>Koszt netto: {{ result.b2c_1000.cost_net }} zł</p>
-        <p>Netto: <strong>{{ result.b2c_1000.net }} zł</strong></p>
-        <p>Brutto: <strong>{{ result.b2c_1000.gross }} zł</strong></p>
-        <p>Marża: {{ result.b2c_1000.margin_pct }}%</p>
-    </div>
-
-    <div class="card">
-        <h3>B2B 250 g</h3>
-        <p>Koszt netto: {{ result.b2b_250.cost_net }} zł</p>
-        <p>Netto po rabacie: <strong>{{ result.b2b_250.net }} zł</strong></p>
-        <p>Brutto po rabacie: <strong>{{ result.b2b_250.gross }} zł</strong></p>
-        <p>Marża po rabacie: {{ result.b2b_250.margin_pct }}%</p>
-    </div>
-
-    <div class="card">
-        <h3>B2B 1 kg</h3>
-        <p>Koszt netto: {{ result.b2b_1000.cost_net }} zł</p>
-        <p>Netto po rabacie: <strong>{{ result.b2b_1000.net }} zł</strong></p>
-        <p>Brutto po rabacie: <strong>{{ result.b2b_1000.gross }} zł</strong></p>
-        <p>Marża po rabacie: {{ result.b2b_1000.margin_pct }}%</p>
-    </div>
+<p class="muted">18% ubytku to założenie startowe: wpisz wynik ważenia przed i po paleniu. Do innych kosztów dodaj np. etykietę, dopłatę do dostawy lub próbki, jeśli nie są już ujęte. Prowizję wpisz jako efektywny procent ceny netto; jest stosowana do B2C i B2B. Przy odrębnych kosztach kanałów przelicz każdy wariant osobno.</p>
+</details>
+</section>
+<section class="card">
+<div class="controls">
+{% for size, label in [('250', '250 g'), ('1000', '1 kg')] %}
+{% set name = 'markup_' + size %}
+<div>
+<div class="range-heading"><label for="{{ name }}">Narzut na pełny koszt {{ label }} · %</label><input id="{{ name }}" name="{{ name }}" type="number" min="0" max="100" step="0.01" value="{{ values[name] }}" data-pair="{{ name }}-range" required></div>
+<input id="{{ name }}-range" type="range" min="0" max="100" step="0.01" value="{{ values[name] }}" data-pair="{{ name }}" aria-label="Narzut na koszt {{ label }} w procentach">
 </div>
-{% endif %}
-
-<script>
-function toggleCoffeeType() {
-    const type = document.getElementById("coffee_type").value;
-    document.getElementById("single_box").style.display = type === "single" ? "block" : "none";
-    document.getElementById("blend_box").style.display = type === "blend" ? "block" : "none";
-}
-</script>
+{% endfor %}
+<p class="muted">Domyślne narzuty: 250 g — 96,05%; 1 kg — 95,03%. Dla Brazylii 100% po 40 zł/kg i domyślnych kosztów daje to B2C 49 zł / 250 g oraz 159 zł / 1 kg brutto. Narzut 75% oznacza np. koszt 20 zł → cenę 35 zł netto przy prowizji 0%.</p>
+<div>
+<div class="range-heading"><label for="discount">Rabat dla kawiarni od B2C · %</label><input id="discount" name="discount" type="number" min="0" max="100" step="0.01" value="{{ values.discount }}" data-pair="discount-range" required></div>
+<input id="discount-range" type="range" min="0" max="100" step="0.01" value="{{ values.discount }}" data-pair="discount" aria-label="Rabat dla kawiarni w procentach">
+<p class="muted">Graniczny rabat bez straty: <strong id="discount-limit">{% if result %}{{ '%.2f'|format(result.max_discount_pct) }}%{% else %}—{% endif %}</strong>. Na tej granicy nie zostaje zysk.</p>
+</div>
+</div>
+<button type="submit">Przelicz wycenę</button>
+<span id="calculation-status" class="muted" role="status"></span>
+</section>
+</form>
+<p id="pricing-error" class="notice" role="alert" {% if not error %}hidden{% endif %}>{{ error or '' }}</p>
+<div id="pricing-results" {% if not result %}hidden{% endif %}>
+<p class="notice">Zielone ziarno w blendzie: <strong><span data-summary="green_price">{{ result.green_price if result else '—' }}</span> zł/kg netto</strong> · Koszty stałe: <strong><span data-summary="fixed_per_kg">{{ result.fixed_per_kg if result else '—' }}</span> zł/kg</strong></p>
+<div class="result-grid">
+<section class="card"><h2>Koszt paczki</h2><p class="muted">Pełny koszt netto przed prowizją od sprzedaży.</p>
+{% for key, label in [('b2c_250','250 g'),('b2c_1000','1 kg')] %}
+<div class="size"><h3>{{ label }}</h3><p class="price">{{ result_value(key,'cost_net') }} zł</p><dl>
+{% for metric, name in [('beans','Ziarno po ubytku'),('production','Produkcja'),('fixed','Udział kosztów stałych'),('packaging','Opakowanie'),('extra','Pozostałe koszty')] %}
+<dt>{{ name }}</dt><dd>{{ result_value(key,metric) }} zł</dd>
+{% endfor %}</dl></div>
+{% endfor %}
+</section>
+{% for channel, title, subtitle in [('b2c','B2C · detal','Cena z narzutem'),('b2b','B2B · kawiarnie','Cena po rabacie od B2C')] %}
+<section class="card" id="{{ channel }}-card"><h2>{{ title }}</h2><p class="muted">{{ subtitle }}. Brutto z VAT 23%.</p>
+{% for size, label in [('250','250 g'),('1000','1 kg')] %}
+{% set key = channel + '_' + size %}
+<div class="size"><h3>{{ label }}</h3><p class="price">{{ result_value(key,'gross') }} zł <small>brutto</small></p><dl>
+<dt>Cena netto</dt><dd>{{ result_value(key,'net') }} zł</dd>
+<dt>Prowizja</dt><dd>{{ result_value(key,'fee') }} zł</dd>
+<dt>Wynik na paczce</dt><dd class="profit-value" data-profit="{{ key }}">{{ result_value(key,'profit') }} zł</dd>
+<dt>Marża po kosztach</dt><dd>{{ result_value(key,'margin_pct') }}%</dd>
+</dl></div>
+{% endfor %}
+<p class="notice" id="{{ channel }}-warning" {% if not result or not (result[channel+'_250'].below_cost or result[channel+'_1000'].below_cost) %}hidden{% endif %}>Cena nie pokrywa pełnego kosztu paczki. Zmniejsz rabat lub zwiększ narzut.</p>
+</section>
+{% endfor %}
+</div>
+<details class="card assumptions"><summary>Rentowność i sposób liczenia</summary>
+<p>Pełny koszt paczki = (cena ziarna / (1 − ubytek) + produkcja za kg + koszty stałe / sprzedaż kg) × waga paczki + opakowanie + pozostałe koszty paczki.</p>
+<p>Cena B2C netto = pełny koszt × (1 + narzut danej gramatury) / (1 − prowizja). Cena B2B netto = cena B2C netto × (1 − rabat). Wynik = cena netto − prowizja − pełny koszt. Ceny netto zaokrąglamy w górę do grosza; limit rabatu w dół do 0,01 punktu procentowego. Wspólny limit rabatu chroni obie gramatury — przyjmujemy niższy z ich limitów. Składniki kosztów są pokazywane po zaokrągleniu, więc ich suma może różnić się o grosz.</p>
+<p>Scenariusze poniżej zakładają sprzedaż całego miesięcznego wolumenu wyłącznie w podanej gramaturze i kanale. Nie należy ich sumować. Próg rentowności = koszty stałe / wkład na pokrycie kosztów stałych za kg (cena po prowizji minus koszty zmienne).</p>
+{% for channel in ['b2c','b2b'] %}{% for size,label in [('250','250 g'),('1000','1 kg')] %}{% set key=channel+'_'+size %}
+<p><strong>{{ channel|upper }} · {{ label }}</strong> — wynik miesięczny: {{ result_value(key,'monthly_profit') }} zł; sprzedaż do pokrycia kosztów: <span data-breakeven="{{ key }}">{% if result and result[key].break_even_kg is not none %}{{ result[key].break_even_kg }} kg/mies.{% else %}—{% endif %}</span></p>
+{% endfor %}{% endfor %}
+<p class="muted">Wynik jest przed podatkiem dochodowym i zależy od kompletności kosztów oraz faktycznej sprzedaży. Uwzględnij wynagrodzenie właściciela, ZUS, księgowość, amortyzację, serwis i marketing w odpowiednich polach, bez podwójnego naliczania.</p>
+<p class="muted">Metoda: <a href="https://www.bdc.ca/en/articles-tools/money-finance/manage-finances/understanding-your-costs" target="_blank" rel="noopener">BDC — koszty zmienne i stałe</a> · <a href="https://www.bdc.ca/en/articles-tools/marketing-sales-export/marketing/steps-setting-right-price-your-products-services" target="_blank" rel="noopener">BDC — cena i próg rentowności</a> · <a href="https://help.cropster.com/en_US/using-roasting-intelligence/how-to-track-weight-loss" target="_blank" rel="noopener">Cropster — pomiar ubytku</a>.</p>
+</details>
+</div>
+</div>
+<script src="{{ url_for('static', filename='coffee_pricing.js') }}" defer></script>
 {% endblock %}
