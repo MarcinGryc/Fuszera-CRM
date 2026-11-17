@@ -9,7 +9,7 @@ DEFAULTS = {
     "blend_price": [40, 40, 40], "blend_percentage": [100, 0, 0],
     "packaging": 5, "production": 5, "fixed_monthly": 1500, "monthly_kg": 200,
     "roast_loss": 18, "extra_per_bag": 0, "sales_fee": 0,
-    "markup_250": 96.05, "markup_1000": 95.03, "discount": 20,
+    "margin": 48.72, "discount": 20,
 }
 VAT_RATE = Decimal("0.23")
 CENT = Decimal("0.01")
@@ -35,7 +35,8 @@ def parse_non_negative(value, label):
 
 def calculate_price(green_price_net_per_kg, pack_weight_kg, production_cost_per_kg_roasted,
                     markup, discount=0, *, packaging=5, fixed_monthly=1500,
-                    monthly_kg=200, roast_loss=0.18, extra_per_bag=0, sales_fee=0):
+                    monthly_kg=200, roast_loss=0.18, extra_per_bag=0, sales_fee=0,
+                    round_retail_gross=False):
     """Allocate overhead to kilograms of roasted coffee sold, without double-counting
     labor/gas/electricity already in production. Sales fees use NET revenue as base.
     Round prices up to cents so a break-even price never falls below full cost.
@@ -47,8 +48,8 @@ def calculate_price(green_price_net_per_kg, pack_weight_kg, production_cost_per_
         raise ValueError("Wartości wyceny muszą być nieujemnymi, skończonymi liczbami do 1 mld.")
     if pack_weight_kg <= 0 or monthly_kg < 0.01:
         raise ValueError("Gramatura musi być większa od zera, a miesięczna sprzedaż wynosić co najmniej 0,01 kg.")
-    if not 0 <= markup <= 1 or not 0 <= discount <= 1:
-        raise ValueError("Narzut i rabat muszą mieścić się w zakresie 0–100%.")
+    if not 0 <= discount <= 1:
+        raise ValueError("Rabat musi mieścić się w zakresie 0–100%.")
     if not 0 <= roast_loss <= 0.9999 or not 0 <= sales_fee <= 0.9999:
         raise ValueError("Ubytek i prowizja muszą mieścić się w zakresie 0–99,99%.")
     green, weight, production, markup, discount, packaging, fixed, volume, loss, extra, fee = map(decimal, values)
@@ -60,18 +61,40 @@ def calculate_price(green_price_net_per_kg, pack_weight_kg, production_cost_per_
     if cost == 0:
         raise ValueError("Koszt paczki musi być większy od zera. Uzupełnij rzeczywiste koszty.")
     retail = decimal(money(cost * (1 + markup) / (1 - fee), ROUND_CEILING))
-    price = decimal(money(retail * (1 - discount), ROUND_CEILING))
+    retail_gross = None
+    if round_retail_gross:
+        # One shared margin; whole-zloty retail prices retain the 49/159 baseline.
+        # Round the unrounded target UP, then derive the net invoice price.
+        retail_gross = (cost * (1 + markup) / (1 - fee) * (1 + VAT_RATE)).quantize(
+            Decimal(1), rounding=ROUND_CEILING)
+        retail = decimal(money(retail_gross / (1 + VAT_RATE)))
+        # Invoice cent rounding must not put a zero-margin sale below full cost.
+        if retail * (1 - fee) < cost:
+            retail_gross += 1
+            retail = decimal(money(retail_gross / (1 + VAT_RATE)))
+    if retail_gross is None:
+        price = decimal(money(retail * (1 - discount), ROUND_CEILING))
+        gross = money(price * (1 + VAT_RATE))
+    else:
+        # Apply the café discount to the advertised B2C price, avoiding a penny
+        # surcharge from applying and rounding the discount twice through VAT.
+        gross = money(retail_gross * (1 - discount))
+        price = decimal(money(decimal(gross) / (1 + VAT_RATE)))
     commission = price * fee
     profit = price - commission - cost
     contribution = price - commission - variable_cost
     break_even_kg = fixed / contribution * weight if contribution > 0 else None
     # Floor the quoted discount limit to avoid advertising a loss-making discount.
     max_discount = max(Decimal(0), (1 - cost / (retail * (1 - fee))) * 100)
+    if retail_gross is not None:
+        minimum_net = decimal(money(cost / (1 - fee), ROUND_CEILING))
+        minimum_gross = decimal(money(minimum_net * (1 + VAT_RATE), ROUND_CEILING))
+        max_discount = max(Decimal(0), (1 - minimum_gross / retail_gross) * 100)
     return {
         "cost_net": money(cost), "beans": money(bean_cost),
         "production": money(production_cost), "fixed": money(fixed_cost),
         "packaging": money(packaging), "extra": money(extra),
-        "net": float(price), "gross": money(price * (1 + VAT_RATE)),
+        "net": float(price), "gross": gross,
         "fee": money(commission), "profit": money(profit),
         "margin_pct": money(profit / price * 100) if price else None,
         "max_discount_pct": money(max_discount, ROUND_FLOOR),
@@ -92,17 +115,24 @@ def calculate_quote(form):
         raise ValueError("Cena każdej używanej kawy musi być większa od zera.")
     labels = {"packaging": "opakowania", "production": "produkcji", "fixed_monthly": "kosztów stałych",
               "monthly_kg": "miesięcznej sprzedaży", "roast_loss": "ubytku", "extra_per_bag": "pozostałych kosztów",
-              "sales_fee": "prowizji", "markup_250": "narzutu 250 g",
-              "markup_1000": "narzutu 1 kg", "discount": "rabatu"}
+              "sales_fee": "prowizji", "margin": "marży", "discount": "rabatu"}
     inputs = {key: parse_non_negative(form.get(key), label) for key, label in labels.items()}
+    if not 0 <= inputs["margin"] < 100:
+        raise ValueError("Marża musi być mniejsza niż 100%.")
+    margin = decimal(inputs["margin"]) / 100
+    fee = decimal(inputs["sales_fee"]) / 100
+    if margin + fee >= 1:
+        raise ValueError("Marża i prowizja muszą łącznie wynosić mniej niż 100%.")
+    markup = margin / (1 - fee - margin)
     green = sum(decimal(p) * decimal(s) / 100 for p, s in zip(prices, percentages))
     kwargs = {key: inputs[key] for key in ("packaging", "fixed_monthly", "monthly_kg", "extra_per_bag")}
-    kwargs.update(roast_loss=inputs["roast_loss"] / 100, sales_fee=inputs["sales_fee"] / 100)
+    kwargs.update(roast_loss=inputs["roast_loss"] / 100, sales_fee=inputs["sales_fee"] / 100,
+                  round_retail_gross=True)
     result = {"green_price": money(green)}
     for size, weight in (("250", 0.25), ("1000", 1)):
         for channel, discount in (("b2c", 0), ("b2b", inputs["discount"] / 100)):
             result[f"{channel}_{size}"] = calculate_price(
-                float(green), weight, inputs["production"], inputs[f"markup_{size}"] / 100, discount, **kwargs)
+                float(green), weight, inputs["production"], float(markup), discount, **kwargs)
     result["fixed_per_kg"] = money(decimal(inputs["fixed_monthly"]) / decimal(inputs["monthly_kg"]))
     result["max_discount_pct"] = min(result[f"b2c_{size}"]["max_discount_pct"] for size in ("250", "1000"))
     return result

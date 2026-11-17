@@ -44,18 +44,30 @@ class CoffeeCostTests(unittest.TestCase):
         self.assertEqual(quote['b2c_1000']['gross'], 159)
         self.assertEqual(quote['b2c_250']['cost_net'], 20.32)
         self.assertEqual(quote['b2c_1000']['cost_net'], 66.28)
+        self.assertEqual(quote['b2b_250']['gross'], 39.2)
+        self.assertEqual(quote['b2b_1000']['gross'], 127.2)
 
-    def test_markups_are_independent_and_discount_limit_protects_both_sizes(self):
-        quote = calculate_quote(form())
-        changed = calculate_quote(form(markup_250=0))
-        self.assertEqual(changed['b2c_1000'], quote['b2c_1000'])
-        self.assertLess(changed['b2c_250']['net'], quote['b2c_250']['net'])
-        for markup in (0, 100):
-            values = dict(markup_250=markup, markup_1000=markup)
+    def test_single_margin_controls_both_sizes_and_discount_limit_is_safe(self):
+        default = calculate_quote(form())
+        changed = calculate_quote(form(margin=30))
+        for size in ('250', '1000'):
+            self.assertLess(changed[f'b2c_{size}']['gross'], default[f'b2c_{size}']['gross'])
+        for margin in (0, 48.72, 99):
+            values = dict(margin=margin)
             retail = calculate_quote(form(**values))
             discounted = calculate_quote(form(**values, discount=retail['max_discount_pct']))
             self.assertFalse(discounted['b2b_250']['below_cost'])
             self.assertFalse(discounted['b2b_1000']['below_cost'])
+
+    def test_margin_is_a_share_of_revenue_and_retail_prices_round_up(self):
+        quote = calculate_quote(form(margin=40))
+        for size in ('250', '1000'):
+            price = quote[f'b2c_{size}']
+            self.assertGreaterEqual(price['margin_pct'], 40)
+            self.assertLess(price['margin_pct'], 43)
+            self.assertEqual(price['gross'] % 1, 0)
+        with self.assertRaises(ValueError):
+            calculate_quote(form(margin=100))
 
     def test_discount_after_markup_and_vat(self):
         quote = calculate_price(32.8, 1, 5, .75, .2)
@@ -101,7 +113,7 @@ class CoffeeCostTests(unittest.TestCase):
 
     def test_invalid_inputs_are_rejected(self):
         for kwargs in ({'monthly_kg': 0}, {'monthly_kg': 1e-300}, {'roast_loss': 1}, {'sales_fee': 1},
-                       {'markup': 1.01}, {'discount': -1}, {'green_price_net_per_kg': math.nan},
+                       {'markup': -1}, {'discount': -1}, {'green_price_net_per_kg': math.nan},
                        {'production_cost_per_kg_roasted': math.inf}, {'packaging': -1}):
             inputs = dict(green_price_net_per_kg=40, pack_weight_kg=1,
                           production_cost_per_kg_roasted=5, markup=.75)
@@ -109,7 +121,7 @@ class CoffeeCostTests(unittest.TestCase):
                 calculate_price(**{**inputs, **kwargs})
         for data in (form(blend_percentage=[50, 40, 0]), form(blend_percentage=[101, 0, 0]),
                      form(blend_price=[0, 40, 40]), form(monthly_kg='nan'),
-                     form(markup_250=101), form(markup_1000=101)):
+                     form(margin=100), form(margin=101)):
             with self.subTest(data=data), self.assertRaises(ValueError):
                 calculate_quote(data)
 
@@ -129,11 +141,16 @@ class CoffeeRouteTests(unittest.TestCase):
         response = self.client.get('/coffee-pricing')
         self.assertEqual(response.status_code, 200)
         page = response.get_data(as_text=True)
-        self.assertEqual(page.count('type="range"'), 9)
-        self.assertIn('name="markup_250"', page)
-        self.assertIn('name="markup_1000"', page)
-        self.assertIn('Brazylia', page)
-        self.assertIn('B2B · kawiarnie', page)
+        self.assertEqual(page.count('type="range"'), 8)
+        self.assertIn('name="margin"', page)
+        self.assertNotIn('name="markup_250"', page)
+        self.assertIn('Kawa 1', page)
+        self.assertNotIn('Brazylia', page)
+        self.assertIn('250 g B2B', page)
+        self.assertIn('type="hidden" name="packaging"', page)
+        self.assertNotIn('Rentowność', page)
+        self.assertNotIn('Koszt paczki i palarni', page)
+        self.assertEqual(page.count('<section class="card" data-price-card='), 4)
 
     def test_json_quote_and_validation(self):
         response = self.client.post('/coffee-pricing', data=form(), headers={'Accept': 'application/json'})
@@ -146,14 +163,14 @@ class CoffeeRouteTests(unittest.TestCase):
         self.assertIn('100%', response.json['error'])
 
     def test_without_javascript_preserves_inputs_and_results(self):
-        response = self.client.post('/coffee-pricing', data=form(packaging='6.25', markup_250=100, markup_1000=100))
+        response = self.client.post('/coffee-pricing', data=form(packaging='6.25', margin=50))
         page = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn('value="6.25"', page)
-        self.assertIn('data-result="b2c_250.net">43.15', page)
+        self.assertIn('data-result="b2c_250.gross">54.00', page)
         response = self.client.post('/coffee-pricing', data=form(discount=100))
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Cena nie pokrywa pełnego kosztu', response.get_data(as_text=True))
+        self.assertIn('class="card loss"', response.get_data(as_text=True))
 
     def test_requires_login(self):
         with self.client.session_transaction() as session:

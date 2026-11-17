@@ -2,29 +2,38 @@
     const form = document.getElementById('pricing-form');
     const results = document.getElementById('pricing-results');
     const error = document.getElementById('pricing-error');
-    const status = document.getElementById('calculation-status');
-    const totalLabel = document.getElementById('blend-total');
+    const shares = [...form.querySelectorAll('[name=blend_percentage]')];
     const number = new Intl.NumberFormat('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     let timer, controller, revision = 0;
+
+    function balanceShares(changedIndex) {
+        if (shares[changedIndex].value === '') return;
+        const changed = Math.round(Math.max(0, Math.min(100, Number(shares[changedIndex].value))) * 100);
+        const others = [0, 1, 2].filter(index => index !== changedIndex);
+        const previous = others.map(index => Math.round(Number(shares[index].value) * 100) || 0);
+        const remaining = 10000 - changed;
+        const previousTotal = previous[0] + previous[1];
+        const first = previousTotal ? Math.round(remaining * previous[0] / previousTotal) : Math.round(remaining / 2);
+        const values = [];
+        values[changedIndex] = changed;
+        values[others[0]] = first;
+        values[others[1]] = remaining - first;
+        shares.forEach((input, index) => {
+            input.value = String(values[index] / 100);
+            document.getElementById(input.dataset.pair).value = input.value;
+        });
+    }
 
     function showError(message) {
         error.textContent = message;
         error.hidden = false;
         results.hidden = true;
-        document.getElementById('discount-limit').textContent = '—';
-    }
-
-    function updateTotal() {
-        const total = [...form.querySelectorAll('[name=blend_percentage]')]
-            .reduce((sum, input) => sum + Number(input.value), 0);
-        totalLabel.textContent = `Suma udziałów: ${number.format(total)} / 100%`;
-        totalLabel.classList.toggle('expense', Math.abs(total - 100) > 0.000001);
     }
 
     async function calculate(currentRevision) {
         if (!form.checkValidity()) {
-            status.textContent = '';
-            showError('Uzupełnij prawidłowe wartości. Narzut, udziały i rabat: 0–100%; sprzedaż musi być większa od zera.');
+            showError('Sprawdź wpisane wartości.');
+            results.removeAttribute('aria-busy');
             return;
         }
         controller = new AbortController();
@@ -34,49 +43,29 @@
                 headers: {'Accept': 'application/json'}, signal: controller.signal,
             });
             if (currentRevision !== revision) return;
-            if (response.redirected) throw new Error('Sesja wygasła. Zaloguj się ponownie, aby przeliczyć cenę.');
+            if (response.redirected) throw new Error('Zaloguj się ponownie.');
             const payload = await response.json();
             if (currentRevision !== revision) return;
             if (!response.ok || payload.error) {
-                showError(payload.error || 'Nie udało się przeliczyć ceny.');
+                showError(payload.error || 'Błąd wyceny.');
                 return;
             }
             const quote = payload.result;
             results.querySelectorAll('[data-result]').forEach(element => {
                 const [key, metric] = element.dataset.result.split('.');
-                const value = quote[key][metric];
-                element.textContent = value === null ? '—' : number.format(value);
+                element.textContent = number.format(quote[key][metric]);
             });
-            results.querySelectorAll('[data-summary]').forEach(element => {
-                element.textContent = number.format(quote[element.dataset.summary]);
+            results.querySelectorAll('[data-price-card]').forEach(element => {
+                element.classList.toggle('loss', quote[element.dataset.priceCard].below_cost);
             });
-            results.querySelectorAll('[data-breakeven]').forEach(element => {
-                const value = quote[element.dataset.breakeven].break_even_kg;
-                element.textContent = value === null ? 'Brak — cena nie pokrywa kosztów zmiennych' : `${number.format(value)} kg/mies.`;
-            });
-            results.querySelectorAll('[data-profit]').forEach(element => {
-                element.classList.toggle('expense', quote[element.dataset.profit].below_cost);
-                element.classList.toggle('income', !quote[element.dataset.profit].below_cost);
-            });
-            for (const channel of ['b2c', 'b2b']) {
-                const loss = quote[`${channel}_250`].below_cost || quote[`${channel}_1000`].below_cost;
-                document.getElementById(`${channel}-warning`).hidden = !loss;
-                document.getElementById(`${channel}-card`).classList.toggle('loss', loss);
-            }
-            document.getElementById('discount-limit').textContent = `${number.format(quote.max_discount_pct)}%`;
             error.hidden = true;
             results.hidden = false;
-            status.textContent = 'Wycena aktualna';
         } catch (exception) {
             if (currentRevision === revision && exception.name !== 'AbortError') {
-                showError(exception.message || 'Błąd połączenia. Spróbuj ponownie.');
+                showError(exception.message || 'Błąd połączenia.');
             }
         } finally {
-            if (currentRevision === revision) {
-                results.classList.remove('pending');
-                results.removeAttribute('aria-busy');
-                if (results.hidden) status.textContent = '';
-            }
+            if (currentRevision === revision) results.removeAttribute('aria-busy');
         }
     }
 
@@ -84,12 +73,9 @@
         clearTimeout(timer);
         if (controller) controller.abort();
         const currentRevision = ++revision;
-        updateTotal();
-        // Never leave stale prices or a previous discount limit visible.
         results.hidden = true;
-        document.getElementById('discount-limit').textContent = '—';
+        results.setAttribute('aria-busy', 'true');
         error.hidden = true;
-        status.textContent = 'Przeliczanie…';
         timer = setTimeout(() => calculate(currentRevision), delay);
     }
 
@@ -101,6 +87,10 @@
                 paired.max = Math.max(100, Number(input.value) || 0);
             }
             paired.value = input.value;
+            const shareInput = input.name === 'blend_percentage' ? input : paired;
+            if (shareInput.name === 'blend_percentage') {
+                balanceShares(shares.indexOf(shareInput));
+            }
         }
         schedule();
     });
