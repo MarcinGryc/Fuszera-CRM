@@ -49,8 +49,8 @@
 <p id="pricing-error" class="error" role="alert" {% if not error %}hidden{% endif %}>{{ error or '' }}</p>
 <div id="pricing-results" class="result-grid" aria-live="polite" {% if not result %}hidden{% endif %}>
 <section class="card"><h2>Koszt 1 kg netto</h2><p class="price">{{ amount('b2c_1000','cost_net') }}</p></section>
-{% for key, label in [('b2c_250','250 g B2C'),('b2c_1000','1 kg B2C'),('b2b_250','250 g B2B'),('b2b_1000','1 kg B2B')] %}
-<section class="card{% if result and result[key].below_cost %} loss{% endif %}" data-price-card="{{ key }}"><h2>{{ label }}</h2><p class="price" aria-label="{{ label }} brutto">{{ amount(key,'gross') }}</p></section>
+{% for key, label, metric in [('b2c_250','250 g B2C','gross'),('b2c_1000','1 kg B2C','gross'),('b2b_250','250 g B2B netto','net'),('b2b_1000','1 kg B2B netto','net')] %}
+<section class="card{% if result and result[key].below_cost %} loss{% endif %}" data-price-card="{{ key }}"><h2>{{ label }}</h2><p class="price" aria-label="{{ label }}{% if metric == 'gross' %} brutto{% endif %}">{{ amount(key,metric) }}</p></section>
 {% endfor %}
 </div>
 </div>
