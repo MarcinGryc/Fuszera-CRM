@@ -2,17 +2,23 @@
 <html lang="pl">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Logowanie - Fuszera CRM</title>
 
     <style>
+        @font-face { font-family: 'Archivo'; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/static/fonts/archivo-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+        @font-face { font-family: 'Archivo'; font-style: normal; font-weight: 100 900; font-display: swap; src: url(/static/fonts/archivo-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
         :root {
-            --bg: #1f1f24;
-            --panel: #2b2b33;
-            --text: #f4f4f5;
-            --muted: #b8b8c2;
-            --pink: #ffb6d9;
-            --pink2: #ff8fc7;
-            --danger: #ff6b6b;
+            color-scheme: dark;
+            --bg: #171418;
+            --panel: rgba(38, 33, 39, .78);
+            --text: #f8f4f7;
+            --muted: #bdb3bf;
+            --line: rgba(255, 255, 255, .10);
+            --pink: #ff76b3;
+            --pink2: #f3a3c7;
+            --danger: #ff7890;
         }
 
         * {
@@ -23,11 +29,11 @@
             margin: 0;
             min-height: 100vh;
             background:
-                radial-gradient(circle at top left, rgba(255, 182, 217, 0.28), transparent 34%),
-                radial-gradient(circle at bottom right, rgba(255, 143, 199, 0.22), transparent 36%),
-                linear-gradient(135deg, #17171b, #2b2b33);
+                radial-gradient(1200px 600px at 10% -10%, rgba(255, 118, 179, .14), transparent 60%),
+                linear-gradient(160deg, #221a21 0%, #171418 50%, #1d1520 100%) fixed;
             color: var(--text);
-            font-family: Arial, sans-serif;
+            font-family: 'Archivo', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -36,12 +42,13 @@
         .login-box {
             width: 430px;
             max-width: 92%;
-            background: rgba(43, 43, 51, 0.92);
-            border: 1px solid rgba(255, 182, 217, 0.35);
+            background: var(--panel);
+            border: 1px solid var(--line);
             border-radius: 24px;
             padding: 38px;
-            box-shadow: 0 28px 80px rgba(0,0,0,0.55);
-            backdrop-filter: blur(12px);
+            box-shadow: 0 22px 56px rgba(0, 0, 0, .40);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
         }
 
         .brand {
@@ -55,8 +62,10 @@
 
         h1 {
             margin: 0 0 10px;
-            color: var(--pink);
+            color: var(--text);
             font-size: 36px;
+            font-weight: 850;
+            letter-spacing: -.01em;
         }
 
         p {
@@ -74,9 +83,9 @@
             width: 100%;
             padding: 14px;
             margin-bottom: 18px;
-            border-radius: 11px;
-            border: 1px solid #555561;
-            background: #34343d;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .05);
             color: var(--text);
             font-size: 15px;
         }
@@ -84,17 +93,18 @@
         input:focus {
             outline: none;
             border-color: var(--pink);
-            box-shadow: 0 0 0 3px rgba(255, 182, 217, 0.12);
+            box-shadow: 0 0 0 4px rgba(255, 118, 179, .16);
         }
 
         button {
             width: 100%;
             padding: 14px;
             background: var(--pink);
-            color: #17171b;
+            color: #2a1020;
             border: none;
-            border-radius: 11px;
-            font-weight: bold;
+            border-radius: 999px;
+            font-weight: 750;
+            font-family: inherit;
             font-size: 15px;
             cursor: pointer;
         }
@@ -104,8 +114,8 @@
         }
 
         .error {
-            background: rgba(255, 107, 107, 0.14);
-            border: 1px solid rgba(255, 107, 107, 0.45);
+            background: rgba(255, 120, 144, .22);
+            border: 1px solid rgba(255, 120, 144, .45);
             color: var(--danger);
             padding: 12px;
             border-radius: 11px;
