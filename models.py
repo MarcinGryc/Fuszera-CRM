@@ -87,6 +87,9 @@ class InventoryItem(db.Model):
     quantity = db.Column(db.Float, default=0)
     unit = db.Column(db.String(50), default="szt")
     notes = db.Column(db.Text)
+    # green / roasted / packaging / parcels; empty for items added before the categories existed.
+    category = db.Column(db.String(30))
+    sort_order = db.Column(db.Integer, default=0)
 
 
 class Supplier(db.Model):

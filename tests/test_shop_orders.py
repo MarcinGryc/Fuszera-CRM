@@ -337,7 +337,8 @@ class ShopOrderSyncTests(unittest.TestCase):
 
         with self.client.session_transaction() as session:
             session["logged_in"] = True
-        page = self.client.get("/products?q=Kawa")
+        self.assertIn("/inventory#cennik", self.client.get("/products?q=Kawa").headers["Location"])
+        page = self.client.get("/inventory")
         page_text = page.get_data(as_text=True)
         self.assertEqual(page.status_code, 200)
         self.assertIn("<summary>Edytuj</summary>", page_text)
@@ -351,7 +352,7 @@ class ShopOrderSyncTests(unittest.TestCase):
             data={"name": "Kawa zmieniona", "weight": "1 kg", "price": "45.50", "q": "Kawa"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/products?q=Kawa", response.headers["Location"])
+        self.assertIn("/inventory#cennik", response.headers["Location"])
         with self.app.app_context():
             product = db.session.get(Product, product_id)
             self.assertEqual(product.name, "Kawa zmieniona")

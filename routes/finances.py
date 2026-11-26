@@ -24,7 +24,7 @@ def finances():
         )
         db.session.add(item)
         db.session.commit()
-        return redirect(url_for("finances.finances"))
+        return redirect(url_for("finances.finances", month=request.form.get("month") or None))
 
     items = Finance.query.order_by(Finance.date.desc(), Finance.id.desc()).all()
 

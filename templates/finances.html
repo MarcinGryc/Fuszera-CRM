@@ -1,12 +1,27 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.finance-add { display: grid; grid-template-columns: 130px minmax(160px, 2fr) 120px 150px auto; gap: 8px; align-items: center; }
+.finance-add input, .finance-add select { margin: 0; min-height: 40px; padding: .45rem .7rem; }
+.month-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.month-head form { margin: 0; }
+.month-head input[type=month] { width: auto; margin: 0; min-height: 34px; padding: .25rem .6rem; font-size: .9rem; border-radius: 999px; }
+@media (max-width: 760px) { .finance-add { grid-template-columns: 1fr 1fr; } .finance-add input[name=title] { grid-column: 1 / -1; } }
+</style>
+
 <h1>Finanse</h1>
 
-<form method="get" class="card">
-    <label for="finance-month">Miesiąc podsumowania</label>
-    <input id="finance-month" name="month" type="month" value="{{ selected_month }}" required>
-    <button type="submit">Pokaż miesiąc</button>
+<form method="post" class="card finance-add" aria-label="Dodaj wpis">
+    <input type="hidden" name="month" value="{{ selected_month }}">
+    <select name="type" required aria-label="Typ">
+        <option value="income">Przychód</option>
+        <option value="expense">Wydatek</option>
+    </select>
+    <input name="title" placeholder="Tytuł wpisu" required aria-label="Tytuł">
+    <input name="amount" type="number" step="0.01" placeholder="Kwota" required aria-label="Kwota">
+    <input name="date" type="date" aria-label="Data" title="Puste = dzisiaj">
+    <button type="submit">Dodaj wpis</button>
 </form>
 
 <h2>Łącznie</h2>
@@ -25,7 +40,13 @@
     </div>
 </div>
 
-<h2>Wybrany miesiąc: {{ selected_month }}</h2>
+<div class="month-head">
+    <h2>Miesiąc</h2>
+    <form method="get">
+        <input name="month" type="month" value="{{ selected_month }}" aria-label="Wybierz miesiąc" onchange="this.form.submit()" required>
+        <noscript><button type="submit">Pokaż</button></noscript>
+    </form>
+</div>
 <div class="grid">
     <div class="card">
         <h3>Przychody</h3>
@@ -39,29 +60,6 @@
         <h3>Bilans</h3>
         <div class="stat">{{ "%.2f"|format(month_balance) }} zł</div>
     </div>
-</div>
-
-<div class="card">
-    <h2>Dodaj wpis</h2>
-
-    <form method="post">
-        <label>Typ</label>
-        <select name="type" required>
-            <option value="income">Przychód</option>
-            <option value="expense">Wydatek</option>
-        </select>
-
-        <label>Tytuł</label>
-        <input name="title" required>
-
-        <label>Kwota</label>
-        <input name="amount" type="number" step="0.01" required>
-
-        <label>Data</label>
-        <input name="date" type="date">
-
-        <button type="submit">Dodaj</button>
-    </form>
 </div>
 
 <h2>Historia finansów</h2>

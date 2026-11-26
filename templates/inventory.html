@@ -1,76 +1,231 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.stock .add-row { display: grid; grid-template-columns: minmax(140px, 2fr) minmax(130px, 1.2fr) 90px 80px auto; gap: 8px; align-items: center; }
+.stock .add-row input, .stock .add-row select, .stock .item input { margin: 0; min-height: 38px; padding: .45rem .7rem; }
+.stock .add-row button { white-space: nowrap; }
+.stock .section { padding: 14px 16px; }
+.stock .section h2 { margin: 0 0 10px; font-size: 1.15rem; display: flex; align-items: baseline; gap: 10px; }
+.stock .section h2 small { color: var(--muted); font-weight: 600; font-size: .8rem; }
+.stock .items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.stock .item { display: grid; grid-template-columns: 26px minmax(0, 1fr) 96px 64px 26px 34px; gap: 6px; align-items: center; padding: 3px 4px; border-radius: 10px; background: rgba(255, 255, 255, .03); border: 1px solid transparent; }
+.stock .item.dragging { opacity: .9; border-color: var(--pink); background: var(--accent-soft); box-shadow: var(--shadow-lift); position: relative; z-index: 2; }
+.stock .item input { background: transparent; border-color: transparent; }
+.stock .item input:hover { border-color: var(--line); }
+.stock .item input:focus { background: var(--panel2); }
+.stock .item input[name=quantity] { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stock .item input[name=unit] { color: var(--muted); padding-inline: .4rem; }
+.stock .handle { cursor: grab; touch-action: none; user-select: none; color: var(--muted); text-align: center; font-size: 18px; line-height: 1; padding: 6px 0; }
+.stock .handle:active { cursor: grabbing; }
+.stock .state { font-size: 13px; text-align: center; color: var(--green); }
+.stock .state.error { color: var(--danger); }
+.stock .item form { margin: 0; }
+.stock .item .delete { padding: 0; width: 32px; height: 32px; min-height: 0; border-radius: 50%; line-height: 1; }
+.stock .empty { color: var(--muted); margin: 4px 0; }
+.stock #cennik summary { font-size: 20px; }
+@media (max-width: 700px) {
+    .stock .add-row { grid-template-columns: 1fr 1fr; }
+    .stock .add-row input[name=name] { grid-column: 1 / -1; }
+    .stock .item { grid-template-columns: 22px minmax(0, 1fr) 70px 46px 18px 32px; gap: 4px; }
+}
+</style>
+
+<div class="stock">
 <h1>Magazyn</h1>
 
-<form method="get" class="card">
-    <label>Szukaj w magazynie</label>
-    <input name="q" value="{{ q or '' }}" placeholder="Nazwa, jednostka, notatki...">
-    <button type="submit">Szukaj</button>
-    <a class="btn" href="/inventory">Wyczyść</a>
+<form method="post" class="card add-row" aria-label="Dodaj pozycję">
+    <input name="name" placeholder="Nowa pozycja, np. Kolumbia" required aria-label="Nazwa">
+    <select name="category" required aria-label="Kategoria" id="add-category">
+        {% for key, label, unit in categories %}<option value="{{ key }}" data-unit="{{ unit }}">{{ label }}</option>{% endfor %}
+    </select>
+    <input name="quantity" type="number" step="0.01" value="0" aria-label="Stan">
+    <input name="unit" placeholder="{{ categories[0][2] }}" aria-label="Jednostka" id="add-unit">
+    <button type="submit">Dodaj</button>
 </form>
 
-<div class="card">
-    <h2>Dodaj przedmiot</h2>
-
-    <form method="post">
-        <label>Nazwa</label>
-        <input name="name" required>
-
-        <label>Stan</label>
-        <input name="quantity" type="number" step="0.01" required>
-
-        <label>Jednostka</label>
-        <input name="unit" placeholder="np. kg, szt, opak.">
-
-        <label>Notatki</label>
-        <textarea name="notes"></textarea>
-
-        <button type="submit">Dodaj do magazynu</button>
+{% macro item_row(item) %}
+<li class="item" data-id="{{ item.id }}">
+    <span class="handle" title="Przeciągnij, aby zmienić kolejność" aria-hidden="true">⋮⋮</span>
+    <input name="name" value="{{ item.name }}" aria-label="Nazwa" data-save>
+    <input name="quantity" type="number" step="0.01" value="{{ '%g'|format(item.quantity or 0) }}" aria-label="Stan: {{ item.name }}" data-save>
+    <input name="unit" value="{{ item.unit or '' }}" aria-label="Jednostka" data-save>
+    <span class="state" aria-live="polite"></span>
+    <form method="post" action="/inventory/delete/{{ item.id }}">
+        <button class="delete" type="submit" title="Usuń" aria-label="Usuń {{ item.name }}" onclick="return confirm('Usunąć {{ item.name }} z magazynu?')">×</button>
     </form>
-</div>
+</li>
+{% endmacro %}
 
-<h2>Stany magazynowe</h2>
+{% for section in sections %}
+<section class="card section" id="kat-{{ section.key }}">
+    <h2>{{ section.label }} <small>{{ section['items']|length }} poz.</small></h2>
+    {% if section['items'] %}
+    <ul class="items" data-category="{{ section.key }}">
+        {% for item in section['items'] %}{{ item_row(item) }}{% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Brak pozycji — dodaj je formularzem na górze.</p>
+    {% endif %}
+</section>
+{% endfor %}
 
-<table>
-    <tr>
-        <th>Nazwa</th>
-        <th>Stan</th>
-        <th>Jednostka</th>
-        <th>Notatki</th>
-        <th>Zmień stan</th>
-        <th>Akcja</th>
-    </tr>
-
-    {% for item in items %}
-    <tr>
-        <td>{{ item["name"] }}</td>
-        <td>{{ item["quantity"] }}</td>
-        <td>{{ item["unit"] }}</td>
-        <td>{{ item["notes"] }}</td>
-        <td>
-            <form method="post" action="/inventory/update/{{ item['id'] }}">
-                <input name="quantity" type="number" step="0.01" value="{{ item['quantity'] }}">
-                <button type="submit">Zapisz</button>
+{% if other %}
+<section class="card section" id="kat-inne">
+    <h2>Bez kategorii <small>pozycje sprzed podziału — wybierz kategorię, żeby je przenieść</small></h2>
+    <ul class="items">
+        {% for item in other %}
+        <li class="item" data-id="{{ item.id }}" style="grid-template-columns: minmax(0, 1fr) 96px 64px 150px 26px 34px;">
+            <input name="name" value="{{ item.name }}" aria-label="Nazwa" data-save>
+            <input name="quantity" type="number" step="0.01" value="{{ '%g'|format(item.quantity or 0) }}" aria-label="Stan" data-save>
+            <input name="unit" value="{{ item.unit or '' }}" aria-label="Jednostka" data-save>
+            <form method="post" action="/inventory/update/{{ item.id }}" style="margin:0">
+                <select name="category" aria-label="Przenieś do kategorii" onchange="this.form.submit()" style="margin:0;min-height:38px;padding:.4rem .6rem">
+                    <option value="">Przenieś do…</option>
+                    {% for key, label, unit in categories %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                </select>
             </form>
-        </td>
-        <td>
-            <form method="post" action="/inventory/delete/{{ item['id'] }}">
-                <button class="delete" type="submit" onclick="return confirm('Usunąć z magazynu?')">Usuń</button>
+            <span class="state" aria-live="polite"></span>
+            <form method="post" action="/inventory/delete/{{ item.id }}">
+                <button class="delete" type="submit" title="Usuń" aria-label="Usuń {{ item.name }}" onclick="return confirm('Usunąć {{ item.name }} z magazynu?')">×</button>
             </form>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<details id="cennik">
+    <summary>Cennik produktów (do zamówień)</summary>
+    <p class="muted">Produkty z cenami i gramaturą, które wybierasz przy dodawaniu zamówienia.</p>
+    <form method="post" action="/products" class="card add-row" style="grid-template-columns: minmax(140px, 2fr) 120px 120px auto;">
+        <input name="name" placeholder="Nazwa produktu" required aria-label="Nazwa produktu">
+        <input name="weight" placeholder="np. 250 g" aria-label="Gramatura">
+        <input name="price" type="number" step="0.01" min="0" placeholder="Cena" required aria-label="Cena">
+        <button type="submit">Dodaj produkt</button>
+    </form>
+    <table>
+        <tr><th>Nazwa</th><th>Gramatura</th><th>Cena</th><th>Akcja</th></tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.name }}</td>
+            <td>{{ product.weight or '' }}</td>
+            <td>{{ "%.2f"|format(product.price) }} zł</td>
+            <td>
+                <form method="post" action="/products/delete/{{ product.id }}" class="inline">
+                    <button class="delete" type="submit" onclick="return confirm('Usunąć produkt {{ product.name }}?')">Usuń</button>
+                </form>
+                <details class="inline-editor">
+                    <summary>Edytuj</summary>
+                    <form method="post" action="/products/edit/{{ product.id }}" class="card inline-editor-panel">
+                        <label>Nazwa produktu</label>
+                        <input name="name" value="{{ product.name }}" required>
+                        <label>Gramatura</label>
+                        <input name="weight" value="{{ product.weight or '' }}" placeholder="np. 250 g">
+                        <label>Cena</label>
+                        <input name="price" type="number" step="0.01" min="0" value="{{ '%.2f'|format(product.price) }}" required>
+                        <button type="submit">Zapisz zmiany</button>
+                    </form>
+                </details>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">Brak produktów.</td></tr>
+        {% endfor %}
+    </table>
+    <div class="export-box">
+        <a class="btn" href="/products/export">Eksportuj produkty do Excela</a>
+        <form method="post" action="/products/import" enctype="multipart/form-data" style="margin-top: 15px;">
+            <label>Import produktów z Excela</label>
+            <input type="file" name="file" accept=".xlsx" required>
+            <button type="submit">Importuj produkty</button>
+        </form>
+    </div>
+</details>
 
 <div class="export-box">
     <a class="btn" href="/inventory/export">Eksportuj magazyn do Excela</a>
+    <form method="post" action="/inventory/import" enctype="multipart/form-data" style="margin-top: 15px;">
+        <label>Import magazynu z Excela (kolumny: Kategoria, Nazwa, Stan, Jednostka)</label>
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Importuj magazyn</button>
+    </form>
+</div>
 </div>
 
-<form method="post" action="/inventory/import" enctype="multipart/form-data" style="margin-top: 15px;">
-    <label>Import magazynu z Excela</label>
-    <input type="file" name="file" accept=".xlsx" required>
-    <button type="submit">Importuj magazyn</button>
-</form>
+<script>
+(() => {
+    // Jednostka podpowiada się z wybranej kategorii.
+    const category = document.getElementById('add-category');
+    const unit = document.getElementById('add-unit');
+    category.addEventListener('change', () => { unit.placeholder = category.selectedOptions[0].dataset.unit; });
 
+    if (location.hash === '#cennik') document.getElementById('cennik').open = true;
+
+    // Zmiany nazwy, stanu i jednostki zapisują się same, bez przeładowania strony.
+    const flash = (row, text, error) => {
+        const state = row.querySelector('.state');
+        state.textContent = text;
+        state.classList.toggle('error', !!error);
+        if (!error) setTimeout(() => { if (state.textContent === text) state.textContent = ''; }, 1500);
+    };
+    document.querySelectorAll('.stock .item [data-save]').forEach((input) => {
+        input.dataset.saved = input.value;
+        const save = async () => {
+            if (input.value === input.dataset.saved) return;
+            const row = input.closest('.item');
+            const body = new URLSearchParams({ [input.name]: input.value });
+            try {
+                const response = await fetch(`/inventory/update/${row.dataset.id}`, { method: 'POST', body, headers: { 'X-Requested-With': 'fetch' } });
+                if (!response.ok) throw new Error();
+                input.dataset.saved = input.value;
+                flash(row, '✓');
+            } catch {
+                flash(row, '!', true);
+            }
+        };
+        input.addEventListener('change', save);
+        input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); input.blur(); } });
+    });
+
+    // Przeciąganie za uchwyt ⋮⋮ zmienia kolejność w obrębie kategorii (mysz i dotyk).
+    document.querySelectorAll('.stock .items[data-category]').forEach((list) => {
+        list.addEventListener('pointerdown', (event) => {
+            const handle = event.target.closest('.handle');
+            if (!handle) return;
+            event.preventDefault();
+            const row = handle.closest('.item');
+            const before = [...list.children].map((li) => li.dataset.id).join();
+            row.classList.add('dragging');
+            // Listeners on window: moving the row in the DOM would drop pointer capture on the handle.
+            const move = (e) => {
+                const others = [...list.querySelectorAll('.item:not(.dragging)')];
+                const next = others.find((li) => { const box = li.getBoundingClientRect(); return e.clientY < box.top + box.height / 2; });
+                if (next) list.insertBefore(row, next); else list.appendChild(row);
+            };
+            const end = async () => {
+                window.removeEventListener('pointermove', move);
+                window.removeEventListener('pointerup', end);
+                window.removeEventListener('pointercancel', end);
+                row.classList.remove('dragging');
+                const ids = [...list.children].map((li) => Number(li.dataset.id));
+                if (ids.join() === before) return;
+                try {
+                    const response = await fetch('/inventory/reorder', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+                        body: JSON.stringify({ category: list.dataset.category, ids }),
+                    });
+                    if (!response.ok) throw new Error();
+                    flash(row, '✓');
+                } catch {
+                    flash(row, '!', true);
+                }
+            };
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', end);
+            window.addEventListener('pointercancel', end);
+        });
+    });
+})();
+</script>
 {% endblock %}

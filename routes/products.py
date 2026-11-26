@@ -1,6 +1,6 @@
 from math import isfinite
 
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, redirect, request
 
 from extensions import db
 from models import Product
@@ -9,6 +9,7 @@ from routes.export_utils import export_xlsx
 from routes.import_utils import read_xlsx_rows
 
 products_bp = Blueprint("products", __name__)
+PRICE_LIST = "/inventory#cennik"
 
 
 @products_bp.route("/products", methods=["GET", "POST"])
@@ -22,22 +23,10 @@ def products():
         )
         db.session.add(product)
         db.session.commit()
-        return redirect(url_for("products.products"))
+        return redirect(PRICE_LIST)
 
-    q = request.args.get("q", "").strip()
-    query = Product.query
-
-    if q:
-        search = f"%{q}%"
-        query = query.filter(
-            db.or_(
-                Product.name.ilike(search),
-                Product.weight.ilike(search),
-            )
-        )
-
-    products_list = query.order_by(Product.id.desc()).all()
-    return render_template("products.html", products=products_list, q=q)
+    # Produkty są teraz sekcją "Cennik produktów" w Magazynie.
+    return redirect(PRICE_LIST)
 
 
 @products_bp.route("/products/delete/<int:product_id>", methods=["POST"])
@@ -46,7 +35,7 @@ def product_delete(product_id):
     product = Product.query.get_or_404(product_id)
     db.session.delete(product)
     db.session.commit()
-    return redirect(url_for("products.products"))
+    return redirect(PRICE_LIST)
 
 
 @products_bp.route("/products/edit/<int:product_id>", methods=["POST"])
@@ -66,7 +55,7 @@ def product_edit(product_id):
     product.weight = weight
     product.price = price
     db.session.commit()
-    return redirect(url_for("products.products", q=request.form.get("q", "")))
+    return redirect(PRICE_LIST)
 
 
 @products_bp.route("/products/export")
@@ -87,7 +76,7 @@ def products_import():
     file = request.files.get("file")
 
     if not file:
-        return redirect(url_for("products.products"))
+        return redirect(PRICE_LIST)
 
     rows = read_xlsx_rows(file)
 
@@ -100,4 +89,4 @@ def products_import():
         db.session.add(product)
 
     db.session.commit()
-    return redirect(url_for("products.products"))
+    return redirect(PRICE_LIST)

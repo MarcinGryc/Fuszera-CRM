@@ -1,6 +1,7 @@
 from flask import Flask
 from config import Config
 from extensions import db, migrate
+from inventory_setup import ensure_inventory_layout
 
 
 def ensure_additive_schema():
@@ -117,6 +118,7 @@ app = create_app()
 with app.app_context():
     db.create_all()
     ensure_additive_schema()
+    ensure_inventory_layout()
 
     # Tymczasowa naprawa istniejącej bazy na Renderze:
     # dodaje brakującą kolumnę notes do suppliers, jeśli tabela już istniała.
