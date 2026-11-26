@@ -186,6 +186,28 @@ class ShopOrderSyncTests(unittest.TestCase):
         self.assertIn("Zamówienie #1:", orders_page)
         self.assertNotIn("<th>Klient</th>", orders_page)
 
+    def test_typed_client_matches_existing_or_creates_new(self):
+        with self.app.app_context():
+            db.session.add(Client(type="b2b", name="Jan Kowalski", company="Kawiarnia Ziarno"))
+            db.session.commit()
+        with self.client.session_transaction() as session:
+            session["logged_in"] = True
+        item = {"product_name": ["Kawa 250 g"], "unit_price": ["10"], "quantity": ["1"], "total": "10"}
+        self.assertEqual(self.client.post("/orders", data={**item, "client_name": "  kawiarnia ziarno "}).status_code, 302)
+        self.assertEqual(self.client.post("/orders", data={**item, "client_name": "Nowa Osoba"}).status_code, 302)
+        self.assertEqual(self.client.post("/orders", data={**item, "client_name": ""}).status_code, 302)
+        with self.app.app_context():
+            self.assertEqual(Client.query.count(), 2)
+            existing = Client.query.filter_by(company="Kawiarnia Ziarno").one()
+            created = Client.query.filter_by(name="Nowa Osoba").one()
+            self.assertEqual(created.type, "individual")
+            clients = [order.client_id for order in Order.query.order_by(Order.id)]
+            self.assertEqual(clients, [existing.id, created.id, None])
+        page = self.client.get("/orders").get_data(as_text=True)
+        self.assertIn('name="client_name"', page)
+        self.assertNotIn("<summary>Dodaj zamówienie</summary>", page)
+        self.assertNotIn('name="notes"', page)
+
     def test_finance_entries_can_be_added_and_deleted_without_orders(self):
         with self.client.session_transaction() as session:
             session["logged_in"] = True

@@ -12,6 +12,24 @@ from routes.order_metrics import current_month, sold_coffee_weight
 orders_bp = Blueprint("orders", __name__)
 
 
+def client_label(client):
+    return client.company or client.name
+
+
+def find_or_create_client(name):
+    """Klient wpisany w zamówieniu: istniejący po nazwie firmy lub imieniu i nazwisku, inaczej nowy indywidualny."""
+    if len(name) > 255:
+        abort(400, "Nazwa klienta jest zbyt długa.")
+    key = name.casefold()
+    for client in Client.query.all():
+        if key in {(client.company or "").strip().casefold(), (client.name or "").strip().casefold()}:
+            return client
+    client = Client(type="individual", name=name)
+    db.session.add(client)
+    db.session.flush()
+    return client
+
+
 @orders_bp.route("/orders", methods=["GET", "POST"])
 @login_required
 def orders():
@@ -74,6 +92,10 @@ def orders():
         client_id = request.form.get("client_id") or None
         if client_id and not client_id.isdigit():
             abort(400, "Nieprawidłowy klient.")
+        client_name = (request.form.get("client_name") or "").strip()
+        if client_name and not client_id:
+            client = find_or_create_client(client_name)
+            client_id = str(client.id)
 
         order = Order(
             client_id=int(client_id) if client_id else None,

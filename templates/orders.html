@@ -3,6 +3,48 @@
 {% block content %}
 <h1>Historia zamówień</h1>
 
+<style>
+.order-add { display: grid; gap: 8px; }
+.order-add input { margin: 0; min-height: 40px; padding: .45rem .7rem; }
+.order-add .line { display: grid; grid-template-columns: minmax(160px, 2fr) 120px 90px 40px; gap: 8px; align-items: center; }
+.order-add .bottom { display: grid; grid-template-columns: 150px 160px auto; gap: 8px; align-items: center; justify-content: start; }
+.order-add .icon-btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; min-height: 0; }
+.order-add .remove-item { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.order-add .remove-item:hover { box-shadow: none; color: var(--danger); }
+.order-add .order-item:first-child .remove-item { visibility: hidden; }
+.order-add .add-item { justify-self: start; background: transparent; color: var(--pink2); border: 0; padding: 0 2px; min-height: 0; font-size: .9rem; }
+.order-add .add-item:hover { box-shadow: none; text-decoration: underline; }
+@media (max-width: 700px) {
+    .order-add .line { grid-template-columns: 1fr 90px 64px 40px; }
+    .order-add .bottom { grid-template-columns: 1fr 1fr; }
+    .order-add .bottom button { grid-column: 1 / -1; }
+}
+</style>
+
+<form method="post" class="card order-add" aria-label="Dodaj zamówienie">
+    <input name="client_name" list="client-names" placeholder="Klient (wpisz lub wybierz z podpowiedzi, puste = bez klienta)" aria-label="Klient" autocomplete="off">
+    <datalist id="client-names">
+        {% for client in clients %}<option value="{{ client.company or client.name }}">{% endfor %}
+    </datalist>
+    <datalist id="product-names">
+        {% for product in products %}<option value="{{ product.name }}" data-price="{{ product.price }}">{{ product.weight or '' }} · {{ "%.2f"|format(product.price) }} zł</option>{% endfor %}
+    </datalist>
+    <div id="order-items">
+        <div class="line order-item">
+            <input name="product_name" class="product-name" list="product-names" placeholder="Produkt" required aria-label="Produkt" autocomplete="off">
+            <input name="unit_price" class="unit-price" type="number" step="0.01" min="0" placeholder="Cena" aria-label="Cena jednostkowa">
+            <input name="quantity" class="quantity" type="number" value="1" min="1" aria-label="Ilość">
+            <button type="button" class="icon-btn remove-item" title="Usuń pozycję" aria-label="Usuń pozycję">×</button>
+        </div>
+    </div>
+    <button type="button" id="add-item" class="add-item">+ kolejny produkt</button>
+    <div class="bottom">
+        <input name="total" id="total" type="number" step="0.01" min="0" placeholder="Wartość" required aria-label="Wartość zamówienia (suma)" title="Liczy się sama z pozycji; możesz ją zmienić">
+        <input name="order_date" type="date" aria-label="Data" title="Puste = dzisiaj">
+        <button type="submit">Dodaj zamówienie</button>
+    </div>
+</form>
+
 <div class="grid">
     <div class="card">
         <h3>Sprzedana kawa — łącznie</h3>
@@ -22,58 +64,6 @@
     <a class="btn" href="/orders">Wyczyść</a>
 </form>
 
-<details>
-    <summary>Dodaj zamówienie</summary>
-
-    <div class="card">
-        <form method="post">
-            <label>Klient</label>
-            <select name="client_id">
-                <option value="">Bez przypisanego klienta</option>
-                {% for client in clients %}
-                <option value="{{ client.id }}">
-                    {{ client.company or client.name }}
-                </option>
-                {% endfor %}
-            </select>
-
-            <h3>Produkty w zamówieniu</h3>
-
-            <div id="order-items">
-                <div class="card order-item">
-                    <label>Produkt</label>
-                    <select name="product_name" class="product-select" required onchange="updatePrice(this)">
-                        <option value="">Wybierz produkt</option>
-                        {% for product in products %}
-                        <option value="{{ product.name }}" data-price="{{ product.price }}">
-                            {{ product.name }} / {{ product.weight }} / {{ "%.2f"|format(product.price) }} zł
-                        </option>
-                        {% endfor %}
-                    </select>
-
-                    <label>Cena jednostkowa</label>
-                    <input name="unit_price" class="unit-price" type="number" step="0.01" value="0" oninput="calculateTotal()">
-
-                    <label>Ilość</label>
-                    <input name="quantity" class="quantity" type="number" value="1" min="1" oninput="calculateTotal()">
-                </div>
-            </div>
-
-            <button type="button" onclick="addOrderItem()">Dodaj kolejny produkt</button>
-
-            <label>Wartość zamówienia</label>
-            <input name="total" id="total" type="number" step="0.01" required>
-
-            <label>Data</label>
-            <input name="order_date" type="date">
-
-            <label>Notatki</label>
-            <textarea name="notes"></textarea>
-
-            <button type="submit">Dodaj zamówienie</button>
-        </form>
-    </div>
-</details>
 
 <h2>Opłacone i ręczne zamówienia</h2>
 
@@ -127,7 +117,7 @@
             {% endif %}
         </td>
         <td>{{ "%.2f"|format(order.total) }} zł</td>
-        <td>{{ order.notes }}</td>
+        <td>{{ order.notes or "" }}</td>
         <td>
             {% if order.source == "manual" %}
             <form method="post" action="/orders/delete/{{ order.id }}">
@@ -146,36 +136,45 @@
 </div>
 
 <script>
-function updatePrice(selectElement) {
-    const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const price = selectedOption.dataset.price || 0;
-    const card = selectElement.closest(".order-item");
-    card.querySelector(".unit-price").value = price;
-    calculateTotal();
-}
+(() => {
+    const prices = {};
+    document.querySelectorAll('#product-names option').forEach((option) => { prices[option.value.toLowerCase()] = option.dataset.price; });
+    const items = document.getElementById('order-items');
+    const total = document.getElementById('total');
+    let totalEdited = false;
 
-function calculateTotal() {
-    let total = 0;
+    const recalc = () => {
+        if (totalEdited) return;
+        let sum = 0;
+        items.querySelectorAll('.order-item').forEach((row) => {
+            sum += (parseFloat(row.querySelector('.unit-price').value) || 0) * (parseInt(row.querySelector('.quantity').value, 10) || 0);
+        });
+        total.value = sum ? sum.toFixed(2) : '';
+    };
 
-    document.querySelectorAll(".order-item").forEach(item => {
-        const price = parseFloat(item.querySelector(".unit-price").value || 0);
-        const quantity = parseInt(item.querySelector(".quantity").value || 0);
-        total += price * quantity;
+    items.addEventListener('input', (event) => {
+        const row = event.target.closest('.order-item');
+        if (event.target.classList.contains('product-name')) {
+            const price = prices[event.target.value.trim().toLowerCase()];
+            if (price !== undefined) row.querySelector('.unit-price').value = Number(price).toFixed(2);
+        }
+        recalc();
     });
+    items.addEventListener('click', (event) => {
+        if (!event.target.classList.contains('remove-item')) return;
+        event.target.closest('.order-item').remove();
+        recalc();
+    });
+    total.addEventListener('input', () => { totalEdited = total.value !== ''; });
 
-    document.getElementById("total").value = total.toFixed(2);
-}
-
-function addOrderItem() {
-    const container = document.getElementById("order-items");
-    const firstItem = document.querySelector(".order-item");
-    const newItem = firstItem.cloneNode(true);
-
-    newItem.querySelector(".product-select").selectedIndex = 0;
-    newItem.querySelector(".unit-price").value = 0;
-    newItem.querySelector(".quantity").value = 1;
-
-    container.appendChild(newItem);
-}
+    document.getElementById('add-item').addEventListener('click', () => {
+        const row = items.querySelector('.order-item').cloneNode(true);
+        row.querySelector('.product-name').value = '';
+        row.querySelector('.unit-price').value = '';
+        row.querySelector('.quantity').value = 1;
+        items.appendChild(row);
+        row.querySelector('.product-name').focus();
+    });
+})();
 </script>
 {% endblock %}
